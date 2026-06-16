@@ -12,6 +12,7 @@ namespace Glibs.Learning.WebApp
                 return Results.Ok("Ping is OK!");
             });
 
+
             app.Run();
         }
     }
