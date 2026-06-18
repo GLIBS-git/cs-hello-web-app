@@ -49,12 +49,12 @@ namespace Glibs.Learning.WebApp
             Console.WriteLine(_httpRequest.Host);
             Console.WriteLine(_httpRequest.QueryString);
             Console.WriteLine(_httpRequest.Query["a"]);
-            foreach (string? _param in _httpRequest.Query["a"].ToArray())
-            {
-                Console.WriteLine(_param);
-            }
-            Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
-            Array.ForEach<string>([_httpRequest.Query["a"]], static _param => Console.WriteLine(_param) );
+            //foreach (string? _param in _httpRequest.Query["a"].ToArray())
+            //{
+            //    Console.WriteLine(_param);
+            //}
+            //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
+            Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
             return Results.Ok("Test is OK!");
         }
         public static string GetHelp(string _command)
