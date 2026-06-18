@@ -1,4 +1,8 @@
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http.Extensions;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text;
 
 namespace Glibs.Learning.WebApp
 {
@@ -10,8 +14,8 @@ namespace Glibs.Learning.WebApp
         }
         public static void StartWebService(string[] _args)
         {
-            String hostAddress = "http://localhost:5050";
-            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+            //String hostAddress = "http://localhost:5050";
+            String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             WebApplication app = builder.Build();
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -31,18 +35,36 @@ namespace Glibs.Learning.WebApp
                 Console.WriteLine($"Received help/{_helpCommand} command.");
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
-            app.MapGet("/api/v1/ping", (HttpRequest _httpRequest) =>
-            {
-                Console.WriteLine($"Received ping command.");
-                //return Results.Ok("Ping is OK!");
-                return Results.Text($"{hostAddress} is alive!\nUse /HELP command for commands help.\n", contentType: "text/plain");
-            });
-            app.MapGet("/api/v1/test", Program.TestDelegate);
+            app.MapGet("/api/v1/ping", Program.ProcessGetPing);
+            app.MapGet("/api/v1/test", Program.ProcessGetTest);
 
             Console.WriteLine($"Starting web service at {hostAddress}...");
             app.Run();
         }
-        public static IResult TestDelegate(HttpRequest _httpRequest)
+        public static IResult? ProcessGetPing(HttpRequest _httpRequest)
+        {
+            IResult? result = null;
+            Console.WriteLine($"Received ping command.");
+            //result = Results.Ok("Ping is OK!");
+            string[] delayOpt = _httpRequest.Query["delay"].ToArray();
+            string[] outputOpt = _httpRequest.Query["output"].ToArray();
+            int delaySec = 0;
+            foreach (string delay in delayOpt)
+            {
+                if (int.TryParse(delay, out int _delaySec) )
+                {
+                    delaySec = Math.Max(delaySec, _delaySec);
+                }
+            }
+            if (delaySec > 0)
+            {
+                Thread.Sleep(delaySec * 1000);
+            }
+            string responceText = $"{_httpRequest.Host} is alive!\nUse /HELP command for commands help.\n";
+            Program.PrepareTextResponce(responceText, ContentType.Text, StatusCodes.Status200OK);
+            return result;
+        }
+        public static IResult ProcessGetTest(HttpRequest _httpRequest)
         {
             Console.WriteLine($"Received test command.");
             Console.WriteLine(_httpRequest.Method);
@@ -56,6 +78,21 @@ namespace Glibs.Learning.WebApp
             //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
             Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
             return Results.Ok("Test is OK!");
+        }
+        public static IResult? PrepareTextResponce(string _text, ContentType _contentType, int _statusCode)
+        {
+            IResult? result = null;
+            switch (_contentType)
+            {
+                case ContentType.Text:
+                    result = Results.Text("_text", "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
+                    break;
+                case ContentType.Json:
+                    JsonSerializerOptions opt = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.Always };
+                    result = Results.Json(new ResponceJson { Response = _text }, opt, "application/json; charset=utf-8", _statusCode);
+                    break;
+            }
+            return result;
         }
         public static string GetHelp(string _command)
         {
@@ -82,5 +119,14 @@ namespace Glibs.Learning.WebApp
             }
             return helpText;
         }
+    }
+    public enum ContentType
+    {
+        Text = 0,
+        Json = 1
+    }
+    public struct ResponceJson
+    {
+        public string Response { get; set; }
     }
 }
