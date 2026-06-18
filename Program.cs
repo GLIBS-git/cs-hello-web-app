@@ -56,13 +56,23 @@ namespace Glibs.Learning.WebApp
                     delaySec = Math.Max(delaySec, _delaySec);
                 }
             }
+            int statusCode = StatusCodes.Status200OK;
+            string responceText = $"{_httpRequest.Host} is alive!\nUse /HELP command for commands help.\n";
+            ContentType contentType = Program.ParseContentType(outputOpt);
+            
             if (delaySec > 0)
             {
                 Thread.Sleep(delaySec * 1000);
             }
-            string responceText = $"{_httpRequest.Host} is alive!\nUse /HELP command for commands help.\n";
-            Program.PrepareTextResponce(responceText, ContentType.Text, StatusCodes.Status200OK);
+
+            Program.PrepareTextResponce(responceText, ContentType.Text, statusCode);
             return result;
+        }
+        public static ContentType ParseContentType(string[] _outputOpt, ref string responceText)
+        {
+            ContentType contentType = ContentType.Text;
+
+            return contentType;
         }
         public static IResult ProcessGetTest(HttpRequest _httpRequest)
         {
