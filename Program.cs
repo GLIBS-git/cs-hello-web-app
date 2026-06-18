@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http.Extensions;
+
 namespace Glibs.Learning.WebApp
 {
     public class Program
@@ -8,8 +10,8 @@ namespace Glibs.Learning.WebApp
         }
         public static void StartWebService(string[] _args)
         {
-            //String hostAddress = "http://localhost:5050";
-            String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+            String hostAddress = "http://localhost:5050";
+            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             WebApplication app = builder.Build();
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -40,9 +42,17 @@ namespace Glibs.Learning.WebApp
             Console.WriteLine($"Starting web service at {hostAddress}...");
             app.Run();
         }
-        public static IResult TestDelegate(HttpContext _httpContext)
+        public static IResult TestDelegate(HttpRequest _httpRequest)
         {
             Console.WriteLine($"Received test command.");
+            Console.WriteLine(_httpRequest.Method);
+            Console.WriteLine(_httpRequest.Host);
+            Console.WriteLine(_httpRequest.QueryString);
+            Console.WriteLine(_httpRequest.Query["a"]);
+            foreach (String? _param in _httpRequest.Query["a"].ToArray())
+            {
+                Console.WriteLine(_param);
+            }
             return Results.Ok("Test is OK!");
         }
         public static String GetHelp(String _command)
@@ -57,7 +67,8 @@ namespace Glibs.Learning.WebApp
                         "HELP -- get this help.\n" +
                         "HELP/<command> -- get getailed help about certain command.\n" +
                         "PING -- test connection.\n" +
-                        "TEST -- command for testing something.\n";
+                        "TEST -- command for testing something.\n\n" +
+                        "All commands accept query option output=<responce-format> where <responce-format> may be 'text' or 'json'. Default is text responce format.";
                     break;
                 case "ping":
                     helpText = "Query options:\n" +
