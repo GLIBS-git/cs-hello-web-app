@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http.Extensions;
+using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text;
 
 namespace Glibs.Learning.WebApp
 {
@@ -58,21 +59,25 @@ namespace Glibs.Learning.WebApp
             }
             int statusCode = StatusCodes.Status200OK;
             string responceText = $"{_httpRequest.Host} is alive!\nUse /HELP command for commands help.\n";
-            ContentType contentType = Program.ParseContentType(outputOpt);
+            ContentType contentType = ContentType.Text;
+            if (Program.ParseContentType(outputOpt, ref contentType, ref responceText, ref statusCode))
+            {
+
+            }
             
             if (delaySec > 0)
             {
                 Thread.Sleep(delaySec * 1000);
             }
 
-            Program.PrepareTextResponce(responceText, ContentType.Text, statusCode);
+            result = Program.PrepareTextResponce(responceText, ContentType.Text, statusCode);
             return result;
         }
-        public static ContentType ParseContentType(string[] _outputOpt, ref string responceText)
+        public static bool ParseContentType(string[] _outputOpt, ref ContentType _contentType, ref string _responceText, ref int statusCode)
         {
-            ContentType contentType = ContentType.Text;
-
-            return contentType;
+            _contentType = ContentType.Text;
+            
+            return true;
         }
         public static IResult ProcessGetTest(HttpRequest _httpRequest)
         {
