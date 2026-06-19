@@ -50,9 +50,10 @@ namespace Glibs.Learning.WebApp
             string[] delayOpt = _httpRequest.Query["delay"].ToArray();
             string[] outputOpt = _httpRequest.Query["output"].ToArray();
             int delaySec = 0;
+            //Array.ForEach(delayOpt, (string delay) => { if (int.TryParse(delay, out int _delaySec)) { delaySec = Math.Max(delaySec, _delaySec); } });
             foreach (string delay in delayOpt)
             {
-                if (int.TryParse(delay, out int _delaySec) )
+                if (int.TryParse(delay, out int _delaySec))
                 {
                     delaySec = Math.Max(delaySec, _delaySec);
                 }
