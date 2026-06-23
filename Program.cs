@@ -15,7 +15,7 @@ namespace Glibs.Learning.WebApp
         }
         public static void StartWebService(string[] _args)
         {
-            //String hostAddress = "http://localhost:5050";
+            //String hostAddress = "http://localhost:5050"; // Office
             String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             WebApplication app = builder.Build();
@@ -63,7 +63,7 @@ namespace Glibs.Learning.WebApp
             ContentType contentType = ContentType.Text;
             if (Program.ParseContentType(outputOpt, ref contentType, ref responceText, ref statusCode))
             {
-
+                
             }
             
             if (delaySec > 0)
@@ -76,7 +76,7 @@ namespace Glibs.Learning.WebApp
         }
         public static bool ParseContentType(string[] _outputOpt, ref ContentType _contentType, ref string _responceText, ref int statusCode)
         {
-            _contentType = ContentType.Text;
+            //_contentType = ContentType.Text;
             
             return true;
         }
