@@ -63,22 +63,41 @@ namespace Glibs.Learning.WebApp
             ContentType contentType = ContentType.Text;
             if (Program.ParseContentType(outputOpt, ref contentType, ref responceText, ref statusCode))
             {
-                
+                if (delaySec > 0)
+                {
+                    Thread.Sleep(delaySec * 1000);
+                }
             }
-            
-            if (delaySec > 0)
-            {
-                Thread.Sleep(delaySec * 1000);
-            }
-
-            result = Program.PrepareTextResponce(responceText, ContentType.Text, statusCode);
+            result = Program.PrepareTextResponce(responceText, contentType, statusCode);
             return result;
         }
-        public static bool ParseContentType(string[] _outputOpt, ref ContentType _contentType, ref string _responceText, ref int statusCode)
+        public static bool ParseContentType(string[] _outputOpt, ref ContentType _contentType, ref string _responceText, ref int _statusCode)
         {
-            //_contentType = ContentType.Text;
-            
-            return true;
+            _contentType = ContentType.Text;
+            bool ret = true;
+            if (_outputOpt.Length > 1)
+            {
+                ret = false;
+                _statusCode = StatusCodes.Status400BadRequest;
+                _responceText = "Only one option 'output' is allowed.";
+            } 
+            else if (_outputOpt.Length == 1)
+            {
+                switch (_outputOpt[0].ToLower())
+                {
+                    case "text":
+                        break;
+                    case "json":
+                        _contentType = ContentType.Json;
+                        break;
+                    default:
+                        ret = false;
+                        _statusCode = StatusCodes.Status400BadRequest;
+                        _responceText = $"Not allowed output {_outputOpt[0]}.";
+                        break;
+                }
+            }
+            return ret;
         }
         public static IResult ProcessGetTest(HttpRequest _httpRequest)
         {
@@ -101,10 +120,10 @@ namespace Glibs.Learning.WebApp
             switch (_contentType)
             {
                 case ContentType.Text:
-                    result = Results.Text("_text", "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
+                    result = Results.Text(_text, "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
                     break;
                 case ContentType.Json:
-                    JsonSerializerOptions opt = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.Always };
+                    JsonSerializerOptions opt = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
                     result = Results.Json(new ResponceJson { Response = _text }, opt, "application/json; charset=utf-8", _statusCode);
                     break;
             }
