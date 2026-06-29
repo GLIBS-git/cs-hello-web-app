@@ -17,9 +17,12 @@ namespace Glibs.Learning.WebApp
         {
             //String hostAddress = "http://localhost:5050"; // Office
             String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-            WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
+            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, ApplicationName = "Test applicatin", EnvironmentName="Test" };
+            WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             WebApplication app = builder.Build();
             builder.WebHost.UseUrls(hostAddress); // Only one address works
+
+            //app.Run((context) => context.Response.WriteAsync("Test!"));
 
             app.MapGet("/api/v1", (HttpRequest _httpRequest) =>
             {
@@ -99,19 +102,21 @@ namespace Glibs.Learning.WebApp
             }
             return ret;
         }
-        public static IResult ProcessGetTest(HttpRequest _httpRequest)
+        //public static IResult ProcessGetTest(HttpRequest _httpRequest)
+        public static IResult ProcessGetTest(HttpContext _httpContext)
         {
             Console.WriteLine($"Received test command.");
-            Console.WriteLine(_httpRequest.Method);
-            Console.WriteLine(_httpRequest.Host);
-            Console.WriteLine(_httpRequest.QueryString);
-            Console.WriteLine(_httpRequest.Query["a"]);
+            Console.WriteLine(_httpContext.Request.Method);
+            Console.WriteLine(_httpContext.Request.Host);
+            Console.WriteLine(_httpContext.Request.QueryString);
+            Console.WriteLine(_httpContext.Request.Query["a"]);
+            //_httpContext.Response.WriteAsync("").Wait();
             //foreach (string? _param in _httpRequest.Query["a"].ToArray())
             //{
             //    Console.WriteLine(_param);
             //}
             //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
-            Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
+            Array.ForEach<string>(_httpContext.Request.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
             return Results.Ok("Test is OK!");
         }
         public static IResult? PrepareTextResponce(string _text, ContentType _contentType, int _statusCode)
