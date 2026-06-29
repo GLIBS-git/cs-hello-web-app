@@ -62,7 +62,9 @@ namespace Glibs.Learning.WebApp
                 }
             }
             int statusCode = StatusCodes.Status200OK;
-            string responceText = $"{_httpRequest.Host} is alive!\nUse /HELP command for commands help.\n";
+            string responceText = $@"{_httpRequest.Host} is alive!
+                    Use '/HELP' command for commands help.
+                    ";
             ContentType contentType = ContentType.Text;
             if (Program.ParseContentType(outputOpt, ref contentType, ref responceText, ref statusCode))
             {
