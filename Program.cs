@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+
 namespace Glibs.Learning.WebApp
 {
     public class Program
@@ -17,7 +18,8 @@ namespace Glibs.Learning.WebApp
         {
             //String hostAddress = "http://localhost:5050"; // Office
             String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, ApplicationName = "Test applicatin", EnvironmentName="Test" };
+            //WebApplicationOptions options = new WebApplicationOptions() { ApplicationName = "Test applicatin" }; // Not working. What is this? Loads file.
+            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName="Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             WebApplication app = builder.Build();
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -29,6 +31,7 @@ namespace Glibs.Learning.WebApp
                 Console.WriteLine($"Received root command.");
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
+            app.MapGet("/api/v1/current-directory", Program.ProcessGetCurDir);
             app.MapGet("/api/v1/help", (HttpRequest _httpRequest) =>
             {
                 Console.WriteLine($"Received help command.");
@@ -42,13 +45,13 @@ namespace Glibs.Learning.WebApp
             app.MapGet("/api/v1/ping", Program.ProcessGetPing);
             app.MapGet("/api/v1/test", Program.ProcessGetTest);
 
-            Console.WriteLine($"Starting web service at {hostAddress}...");
+            Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
         }
         public static IResult? ProcessGetPing(HttpRequest _httpRequest)
         {
             IResult? result = null;
-            Console.WriteLine($"Received ping command.");
+            Console.WriteLine($"{DateTime.Now.ToString()} # Received ping command.");
             //result = Results.Ok("Ping is OK!");
             string[] delayOpt = _httpRequest.Query["delay"].ToArray();
             string[] outputOpt = _httpRequest.Query["output"].ToArray();
@@ -76,6 +79,39 @@ namespace Glibs.Learning.WebApp
             result = Program.PrepareTextResponce(responceText, contentType, statusCode);
             return result;
         }
+        public static IResult ProcessGetCurDir(HttpContext _httpContext)
+        {
+            Console.WriteLine($"{DateTime.Now.ToString()} # Received current-directory command.");
+            IResult? result = null;
+            int statusCode = StatusCodes.Status200OK;
+            string responceText = $"{Directory.GetCurrentDirectory()}";
+            ContentType contentType = ContentType.Text;
+            result = Program.PrepareTextResponce(responceText, contentType, statusCode);
+            return result;
+        }
+        //public static IResult ProcessGetTest(HttpRequest _httpRequest)
+        public static IResult ProcessGetTest(HttpContext _httpContext)
+        {
+            Console.WriteLine();
+            Console.WriteLine(Directory.GetCurrentDirectory());
+            Console.WriteLine($"Received test command.");
+            Console.WriteLine(_httpContext.Request.Method);
+            Console.WriteLine(_httpContext.Request.Host);
+            Console.WriteLine(_httpContext.Request.QueryString);
+            //Console.WriteLine(_httpContext.Request.Query["a"]);
+            DateTime dt = DateTime.Now;
+            //Console.WriteLine($"{dt.ToShortDateString()} {dt.ToLongTimeString()}");
+            Console.WriteLine(dt.ToString());
+            
+            //_httpContext.Response.WriteAsync("").Wait();
+            //foreach (string? _param in _httpRequest.Query["a"].ToArray())
+            //{
+            //    Console.WriteLine(_param);
+            //}
+            //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
+            Array.ForEach<string>(_httpContext.Request.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
+            return Results.Ok("Test is OK!");
+        }
         public static bool ParseContentType(string[] _outputOpt, ref ContentType _contentType, ref string _responceText, ref int _statusCode)
         {
             _contentType = ContentType.Text;
@@ -85,7 +121,7 @@ namespace Glibs.Learning.WebApp
                 ret = false;
                 _statusCode = StatusCodes.Status400BadRequest;
                 _responceText = "Only one option 'output' is allowed.";
-            } 
+            }
             else if (_outputOpt.Length == 1)
             {
                 switch (_outputOpt[0].ToLower())
@@ -103,23 +139,6 @@ namespace Glibs.Learning.WebApp
                 }
             }
             return ret;
-        }
-        //public static IResult ProcessGetTest(HttpRequest _httpRequest)
-        public static IResult ProcessGetTest(HttpContext _httpContext)
-        {
-            Console.WriteLine($"Received test command.");
-            Console.WriteLine(_httpContext.Request.Method);
-            Console.WriteLine(_httpContext.Request.Host);
-            Console.WriteLine(_httpContext.Request.QueryString);
-            Console.WriteLine(_httpContext.Request.Query["a"]);
-            //_httpContext.Response.WriteAsync("").Wait();
-            //foreach (string? _param in _httpRequest.Query["a"].ToArray())
-            //{
-            //    Console.WriteLine(_param);
-            //}
-            //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
-            Array.ForEach<string>(_httpContext.Request.Query["a"].ToArray(), _param => Console.WriteLine(_param) );
-            return Results.Ok("Test is OK!");
         }
         public static IResult? PrepareTextResponce(string _text, ContentType _contentType, int _statusCode)
         {
