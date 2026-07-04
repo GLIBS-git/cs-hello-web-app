@@ -24,6 +24,7 @@ namespace Glibs.Learning.WebApp
             builder.WebHost.UseUrls(hostAddress); // Only one address works
             //builder.Services.AddTransient<IConsoleLogService, LogService>();
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
+            //builder.Services.AddHostedService<LogService>();
             WebApplication app = builder.Build();
 
             //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
