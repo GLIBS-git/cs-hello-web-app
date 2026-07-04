@@ -21,14 +21,17 @@ namespace Glibs.Learning.WebApp
             //WebApplicationOptions options = new WebApplicationOptions() { ApplicationName = "Test applicatin" }; // Not working. What is this? Loads file.
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName="Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
-            WebApplication app = builder.Build();
             builder.WebHost.UseUrls(hostAddress); // Only one address works
+            //builder.Services.AddTransient<IConsoleLogService, LogService>();
+            builder.Services.AddSingleton<IConsoleLogService, LogService>();
+            WebApplication app = builder.Build();
 
-            //app.Run((context) => context.Response.WriteAsync("Test!"));
+            //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
 
             app.MapGet("/api/v1", (HttpRequest _httpRequest) =>
             {
                 Console.WriteLine($"Received root command.");
+                //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
             app.MapGet("/api/v1/current-directory", Program.ProcessGetCurDir);
@@ -44,6 +47,7 @@ namespace Glibs.Learning.WebApp
             });
             app.MapGet("/api/v1/ping", Program.ProcessGetPing);
             app.MapGet("/api/v1/test", Program.ProcessGetTest);
+            //app.MapGet("/api/v1/test", requestProcessor.ProcessGetTest);
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
@@ -65,9 +69,10 @@ namespace Glibs.Learning.WebApp
                 }
             }
             int statusCode = StatusCodes.Status200OK;
-            string responceText = $@"{_httpRequest.Host} is alive!
-                    Use '/HELP' command for commands help.
-                    ";
+            string responceText = $"""
+                                  {_httpRequest.Host} is alive!
+                                  Use '/HELP' command for commands help.
+                                  """;
             ContentType contentType = ContentType.Text;
             if (Program.ParseContentType(outputOpt, ref contentType, ref responceText, ref statusCode))
             {
@@ -91,6 +96,7 @@ namespace Glibs.Learning.WebApp
         }
         //public static IResult ProcessGetTest(HttpRequest _httpRequest)
         public static IResult ProcessGetTest(HttpContext _httpContext)
+        //public static IResult ProcessGetTest(HttpContext _httpContext, WebApplication _app)
         {
             Console.WriteLine();
             Console.WriteLine(Directory.GetCurrentDirectory());
@@ -102,7 +108,9 @@ namespace Glibs.Learning.WebApp
             DateTime dt = DateTime.Now;
             //Console.WriteLine($"{dt.ToShortDateString()} {dt.ToLongTimeString()}");
             Console.WriteLine(dt.ToString());
-            
+            Console.WriteLine();
+            _httpContext.RequestServices.GetService<IConsoleLogService>().Log("Test logging!");
+
             //_httpContext.Response.WriteAsync("").Wait();
             //foreach (string? _param in _httpRequest.Query["a"].ToArray())
             //{
@@ -162,23 +170,75 @@ namespace Glibs.Learning.WebApp
             switch (_command.ToLower())
             {
                 case "":
-                    helpText = "Welcome to Glibs's \"Hello world\" web service!\n\n" +
-                        "Use commands:\n" +
-                        "HELP -- get this help.\n" +
-                        "HELP/<command> -- get getailed help about certain command.\n" +
-                        "PING -- test connection.\n" +
-                        "TEST -- command for testing something.\n\n" +
-                        "All commands accept query option output=<responce-format> where <responce-format> may be 'text' or 'json'. Default is text responce format.";
+                    helpText =  """
+                                Welcome to Glibs's \"Hello world\" web service!
+
+                                Use commands:
+                                CURRENT-DIRECTORY -- shows current directory of web service
+                                HELP -- get this help.
+                                HELP/<command> -- get getailed help about certain command.
+                                PING -- test connection.
+                                TEST -- command for testing something.
+
+                                All commands accept query option output=<responce-format> where <responce-format> may be 'text' or 'json'. Default is text responce format.
+                                """;
                     break;
                 case "ping":
-                    helpText = "Query options:\n" +
-                        "timeout=<seconds> -- returns responce with delay. <seconds> must be integer.";
+                    helpText =  """
+                                Query options:
+                        
+                                timeout=<seconds> -- returns responce with delay. <seconds> must be integer.
+                                """;
                     break;
                 default:
                     helpText = $"No help for command '{_command}' awailable.";
                     break;
             }
             return helpText;
+        }
+    }
+    public interface IConsoleLogService
+    {
+        void Log(string _message);
+    }
+    public class LogService : IConsoleLogService
+    {
+        public int Counter = 0;
+        public void Log(string _message)
+        {
+            Counter++;
+            Console.WriteLine($"{Counter}: {_message}");
+        }
+    }
+    public class WebRequestProcessor
+    {
+        public WebApplication? WebApp = null;
+        public WebRequestProcessor(WebApplication _webApp)
+        {
+            this.WebApp = _webApp;
+        }
+        public IResult ProcessGetTest(HttpContext _httpContext)
+        {
+            Console.WriteLine();
+            Console.WriteLine(Directory.GetCurrentDirectory());
+            Console.WriteLine($"Received test command.");
+            Console.WriteLine(_httpContext.Request.Method);
+            Console.WriteLine(_httpContext.Request.Host);
+            Console.WriteLine(_httpContext.Request.QueryString);
+            //Console.WriteLine(_httpContext.Request.Query["a"]);
+            DateTime dt = DateTime.Now;
+            //Console.WriteLine($"{dt.ToShortDateString()} {dt.ToLongTimeString()}");
+            Console.WriteLine(dt.ToString());
+            Console.WriteLine();
+            this.WebApp.Services.GetService<IConsoleLogService>().Log("Test logging!");
+            //_httpContext.Response.WriteAsync("").Wait();
+            //foreach (string? _param in _httpRequest.Query["a"].ToArray())
+            //{
+            //    Console.WriteLine(_param);
+            //}
+            //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
+            Array.ForEach<string>(_httpContext.Request.Query["a"].ToArray(), _param => Console.WriteLine(_param));
+            return Results.Ok("Test is OK!");
         }
     }
     public enum ContentType
