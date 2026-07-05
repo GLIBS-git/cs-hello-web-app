@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http.Extensions;
+using System.Collections;
 using System.Net.Mime;
 using System.Text;
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -19,48 +22,89 @@ namespace Glibs.Learning.WebApp
             //String hostAddress = "http://localhost:5050"; // Office
             String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             //WebApplicationOptions options = new WebApplicationOptions() { ApplicationName = "Test applicatin" }; // Not working. What is this? Loads file.
-            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName="Test" };
+            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName="Test"};
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
-            //builder.Services.AddTransient<IConsoleLogService, LogService>();
+            //builder.Services.AddScoped<ILogger>();
+            IServiceCollection serviceCollection = builder.Services;
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
             WebApplication app = builder.Build();
 
             WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
 
-            app.MapGet("/api/v1", (HttpRequest _httpRequest) =>
+            // / [GET]
+            app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
-                Console.WriteLine($"Received root command.");
+                _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
                 //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
-                return Results.Text(Program.GetHelp(""), contentType: "text/plain");
+                //return Results.Text(Program.GetHelp(""), contentType: "text/plain");
+                return Results.Text(Program.GetHelp(""));
             });
-            app.MapGet("/api/v1/current-directory", Program.ProcessGetCurDir);
-            app.MapGet("/api/v1/help", (HttpRequest _httpRequest) =>
+            // debug/appl-services [GET]
+            app.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
+                List<ApplicationService> applicationServicesList = new List<ApplicationService>();
+                foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
+                {
+                    applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
+                }
+                return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, ResponseHelper.JsonSerializingOptions());
+            });
+            // exit [POST]
+            app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
+                _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
+                return Results.Text("Stopping web service...");
+            });
+            // help [GET]
+            app.MapGet("/api/v1/help", () =>
             {
                 Console.WriteLine($"Received help command.");
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
-            //app.MapGet("/api/v1/help/{_helpCommand:alpha}", (string _helpCommand, HttpRequest _httpRequest) =>
-            app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpRequest _httpRequest) =>
+            // help/<command> [GET]
+            app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext) =>
             {
-                Console.WriteLine($"Received help/{_helpCommand} command.");
+                Console.WriteLine($"Received 'help/{_helpCommand}' command.");
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
+            // ping [GET]
             app.MapGet("/api/v1/ping", Program.ProcessGetPing);
+            // pwd [GET]
+            app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
+                return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
+            });
+            // test [GET]
             app.MapGet("/api/v1/test", Program.ProcessGetTest);
-            app.MapGet("/api/v1/test1", requestProcessor.ProcessGetTest);
+            // test-1 [GET]
+            app.MapGet("/api/v1/test-1", requestProcessor.ProcessGetTest);
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
         }
-        public static IResult? ProcessGetPing(HttpRequest _httpRequest)
+        // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public struct ApplicationService
+        {
+            public string Name { get; set; }
+            public string LifeTime { get; set; }
+        }
+        public struct ApplicationServices
+        {
+            public IEnumerable<ApplicationService> ApplicationService { get; set; }   
+        }
+
+        public static IResult? ProcessGetPing(HttpContext _httpContext)
         {
             IResult? result = null;
             Console.WriteLine($"{DateTime.Now.ToString()} # Received ping command.");
             //result = Results.Ok("Ping is OK!");
-            string[] delayOpt = _httpRequest.Query["delay"].ToArray();
-            string[] outputOpt = _httpRequest.Query["output"].ToArray();
+            string[] delayOpt = _httpContext.Request.Query["delay"].ToArray();
+            string[] outputOpt = _httpContext.Request.Query["output"].ToArray();
             int delaySec = 0;
             //Array.ForEach(delayOpt, (string delay) => { if (int.TryParse(delay, out int _delaySec)) { delaySec = Math.Max(delaySec, _delaySec); } });
             foreach (string delay in delayOpt)
@@ -72,7 +116,7 @@ namespace Glibs.Learning.WebApp
             }
             int statusCode = StatusCodes.Status200OK;
             string responceText = $"""
-                                  {_httpRequest.Host} is alive!
+                                  {_httpContext.Request.Host} is alive!
                                   Use '/HELP' command for commands help.
                                   """;
             ContentType contentType = ContentType.Text;
@@ -86,19 +130,7 @@ namespace Glibs.Learning.WebApp
             result = Program.PrepareTextResponce(responceText, contentType, statusCode);
             return result;
         }
-        public static IResult ProcessGetCurDir(HttpContext _httpContext)
-        {
-            Console.WriteLine($"{DateTime.Now.ToString()} # Received current-directory command.");
-            IResult? result = null;
-            int statusCode = StatusCodes.Status200OK;
-            string responceText = $"{Directory.GetCurrentDirectory()}";
-            ContentType contentType = ContentType.Text;
-            result = Program.PrepareTextResponce(responceText, contentType, statusCode);
-            return result;
-        }
-        //public static IResult ProcessGetTest(HttpRequest _httpRequest)
         public static IResult ProcessGetTest(HttpContext _httpContext)
-        //public static IResult ProcessGetTest(HttpContext _httpContext, WebApplication _app)
         {
             Console.WriteLine();
             Console.WriteLine(Directory.GetCurrentDirectory());
@@ -159,8 +191,7 @@ namespace Glibs.Learning.WebApp
                     result = Results.Text(_text, "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
                     break;
                 case ContentType.Json:
-                    JsonSerializerOptions opt = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
-                    result = Results.Json(new ResponceJson { Response = _text }, opt, "application/json; charset=utf-8", _statusCode);
+                    result = Results.Json(new ResponceJson { Response = _text }, ResponseHelper.JsonSerializingOptions(), "application/json; charset=utf-8", _statusCode);
                     break;
             }
             return result;
@@ -172,16 +203,19 @@ namespace Glibs.Learning.WebApp
             switch (_command.ToLower())
             {
                 case "":
-                    helpText =  """
+                    helpText = """
                                 Welcome to Glibs's \"Hello world\" web service!
 
                                 Use commands:
-                                CURRENT-DIRECTORY -- shows current directory of web service
+                                EXIT -- stop current web service.
                                 HELP -- get this help.
-                                HELP/<command> -- get getailed help about certain command.
+                                HELP/<command> -- get detailed help about certain command.
                                 PING -- test connection.
+                                PWD -- shows current directory of web service
                                 TEST -- command for testing something.
-
+                                TEST1 -- another command for testing something.
+                                TEST2 -- one more command for testing something.
+                                
                                 All commands accept query option output=<responce-format> where <responce-format> may be 'text' or 'json'. Default is text responce format.
                                 """;
                     break;
@@ -189,6 +223,7 @@ namespace Glibs.Learning.WebApp
                     helpText =  """
                                 Query options:
                         
+                                output=<text/json> -- sets responce format as text or JSON.
                                 timeout=<seconds> -- returns responce with delay. <seconds> must be integer.
                                 """;
                     break;
@@ -252,9 +287,9 @@ namespace Glibs.Learning.WebApp
                 Console.WriteLine($"{DateTime.Now.ToString()}    Background service is working.");
                 try
                 {
-                    await Task.Delay(5000, _ct);
+                    await Task.Delay(60000, _ct);
                 }
-                catch
+                catch (TaskCanceledException _)
                 {
                 }
             }
@@ -269,5 +304,48 @@ namespace Glibs.Learning.WebApp
     public struct ResponceJson
     {
         public string Response { get; set; }
+    }
+    public static class ResponseHelper
+    {
+        public static JsonSerializerOptions JsonSerializingOptions()
+        {
+            return new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
+
+        }
+        public static ContentType? GetContentType(HttpContext _context, out bool _isOK, out string _responseText)
+        {
+            ContentType? contentType = null;
+            _isOK = false;
+            _responseText = "";
+            string[] outputOpt = _context.Request.Query["output"].ToArray();
+            if (outputOpt.Length == 0)
+            {
+                _isOK = true;
+                contentType = null;
+            }
+            else if (outputOpt.Length > 1)
+            {
+                _isOK = false;
+                contentType = null;
+                _responseText = "Only one 'output' option is allowed";
+            }
+            else if (outputOpt.Length == 1)
+            {
+                switch (outputOpt[0].ToLower())
+                {
+                    case "text":
+                        break;
+                    case "json":
+                        contentType = ContentType.Json;
+                        break;
+                    default:
+                        //ret = false;
+                        //statusCode = StatusCodes.Status400BadRequest;
+                        //responceText = $"Not allowed output {_outputOpt[0]}.";
+                        break;
+                }
+            }
+            return contentType;
+        }
     }
 }
