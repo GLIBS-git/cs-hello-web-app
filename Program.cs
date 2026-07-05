@@ -24,10 +24,10 @@ namespace Glibs.Learning.WebApp
             builder.WebHost.UseUrls(hostAddress); // Only one address works
             //builder.Services.AddTransient<IConsoleLogService, LogService>();
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
-            //builder.Services.AddHostedService<LogService>();
+            builder.Services.AddHostedService<TestBackgroungService>();
             WebApplication app = builder.Build();
 
-            //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
+            WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
 
             app.MapGet("/api/v1", (HttpRequest _httpRequest) =>
             {
@@ -41,14 +41,15 @@ namespace Glibs.Learning.WebApp
                 Console.WriteLine($"Received help command.");
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
-            app.MapGet("/api/v1/help/{_helpCommand:alpha}", (string _helpCommand, HttpRequest _httpRequest) =>
+            //app.MapGet("/api/v1/help/{_helpCommand:alpha}", (string _helpCommand, HttpRequest _httpRequest) =>
+            app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpRequest _httpRequest) =>
             {
                 Console.WriteLine($"Received help/{_helpCommand} command.");
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
             app.MapGet("/api/v1/ping", Program.ProcessGetPing);
             app.MapGet("/api/v1/test", Program.ProcessGetTest);
-            //app.MapGet("/api/v1/test", requestProcessor.ProcessGetTest);
+            app.MapGet("/api/v1/test1", requestProcessor.ProcessGetTest);
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
@@ -240,6 +241,24 @@ namespace Glibs.Learning.WebApp
             //Array.ForEach<string>(_httpRequest.Query["a"].ToArray(), (_param) => { Console.WriteLine(_param); } );
             Array.ForEach<string>(_httpContext.Request.Query["a"].ToArray(), _param => Console.WriteLine(_param));
             return Results.Ok("Test is OK!");
+        }
+    }
+    public class TestBackgroungService : BackgroundService
+    {
+        protected override async Task ExecuteAsync(CancellationToken _ct)
+        {
+            while (!_ct.IsCancellationRequested)
+            {
+                Console.WriteLine($"{DateTime.Now.ToString()}    Background service is working.");
+                try
+                {
+                    await Task.Delay(5000, _ct);
+                }
+                catch
+                {
+                }
+            }
+            await Task.CompletedTask;
         }
     }
     public enum ContentType
