@@ -18,8 +18,8 @@ namespace Glibs.Learning.WebApp
         }
         public static void StartWebService(string[] _args)
         {
-            //String hostAddress = "http://localhost:5050"; // Office
-            String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+            String hostAddress = "http://localhost:5050"; // Office
+            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             //WebApplicationOptions options = new WebApplicationOptions() { ApplicationName = "Test applicatin" }; // Not working. What is this? Loads file.
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName="Test"};
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
@@ -71,21 +71,30 @@ namespace Glibs.Learning.WebApp
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            app.MapGet("/api/v1/ping", Program.ProcessGetPing);
-            // ping-2 [GET]
-            app.MapGet("/api/v1/ping-2", (HttpContext _httpContext, ILogger<Program> _logger, string? output) => 
+            app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) => 
             {
-                _logger.LogInformation("{DateTime} # Received 'ping-2' command.", DateTime.Now.ToString());
+                _logger.LogInformation("{DateTime} # Received '{path}' request with options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(), _httpContext.Request.Path, 
+                    output, delay);
+                string pingReply = ResponseHelper.PingReply(hostAddress);
+                if (int.TryParse(delay??"", out int delaySec))
+                {
+                    if (delaySec > 0)
+                    {
+                        await Task.Delay(delaySec * 1000);
+                    }
+                }
                 if ((output??"").ToLower().Equals("json"))
                 {
-
+                    return Results.Json(new ResponceJson { Response = ResponseHelper.PingReply(pingReply) }, ResponseHelper.JsonSerializingOptions());
                 }
                 else
                 {
-                    return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
+                    return Results.Text($"{pingReply}");
                 }
             }
             );
+            // ping-old [GET]
+            app.MapGet("/api/v1/ping-old", Program.ProcessGetPing);
             // pwd [GET]
             app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
@@ -101,21 +110,10 @@ namespace Glibs.Learning.WebApp
             app.Run();
         }
         // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        public struct ApplicationService
-        {
-            public string Name { get; set; }
-            public string LifeTime { get; set; }
-        }
-        public struct ApplicationServices
-        {
-            public IEnumerable<ApplicationService> ApplicationService { get; set; }   
-        }
-
         public static IResult? ProcessGetPing(HttpContext _httpContext)
         {
             IResult? result = null;
-            Console.WriteLine($"{DateTime.Now.ToString()} # Received ping command.");
-            //result = Results.Ok("Ping is OK!");
+            Console.WriteLine($"{DateTime.Now.ToString()} # Received 'ping-old' command.");
             string[] delayOpt = _httpContext.Request.Query["delay"].ToArray();
             string[] outputOpt = _httpContext.Request.Query["output"].ToArray();
             int delaySec = 0;
@@ -224,6 +222,7 @@ namespace Glibs.Learning.WebApp
                                 HELP -- get this help.
                                 HELP/<command> -- get detailed help about certain command.
                                 PING -- test connection.
+                                PING-OLD -- test connection, old version (method instead of lambda).
                                 PWD -- shows current directory of web service
                                 TEST -- command for testing something.
                                 TEST1 -- another command for testing something.
@@ -318,12 +317,27 @@ namespace Glibs.Learning.WebApp
     {
         public string Response { get; set; }
     }
+    public struct ApplicationService
+    {
+        public string Name { get; set; }
+        public string LifeTime { get; set; }
+    }
+    public struct ApplicationServices
+    {
+        public IEnumerable<ApplicationService> ApplicationService { get; set; }
+    }
     public static class ResponseHelper
     {
         public static JsonSerializerOptions JsonSerializingOptions()
         {
             return new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
-
+        }
+        public static string PingReply(string _host)
+        {
+            return  $"""
+                    {_host} is alive!
+                    Use '/HELP' command for commands help.
+                    """;
         }
         public static ContentType? GetContentType(HttpContext _context, out bool _isOK, out string _responseText)
         {
