@@ -115,7 +115,7 @@ namespace Glibs.Learning.WebApp
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
         }
-        // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // ############################################################################################################################################
         public static string GetHelp(string _command)
         {
             _command ??= "";
@@ -217,7 +217,7 @@ namespace Glibs.Learning.WebApp
     {
         public IEnumerable<ApplicationService> ApplicationService { get; set; }
     }
-    // ## Obsolete ##
+    // ########################### Obsolete ##################################
     public class WebRequestProcessor
     {
         public WebApplication? WebApp = null;
