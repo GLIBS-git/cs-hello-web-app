@@ -124,18 +124,19 @@ namespace Glibs.Learning.WebApp
             {
                 case "":
                     helpText = """
-                                Welcome to Glibs's \"Hello world\" web service!
+                                Welcome to Glibs's 'Hello world' web service!
 
                                 Use commands:
-                                DEBUG/TEST -- command for testing something.
-                                DEBUG/TEST1 -- another command for testing something.
-                                DEBUG/TEST2 -- one more command for testing something.
-                                EXIT -- stop current web service.
-                                HELP -- get this help.
-                                HELP/<command> -- get detailed help about certain command.
-                                PING -- test connection.
-                                PING-OLD -- test connection, old version (method instead of lambda).
-                                PWD -- shows current directory of web service
+                                DEBUG/TEST (get) -- command for testing something.
+                                DEBUG/TEST1 (get) -- another command for testing something.
+                                DEBUG/TEST2 (get) -- one more command for testing something.
+                                EXIT (post) -- stop current web service.
+                                HELP (get) -- get this help.
+                                PING (get) -- test connection.
+                                        More details on: help/ping
+                                PING-OLD (get) -- test connection, old version (method instead of lambda).
+                                        More details on: help/ping-old
+                                PWD (get) -- shows current directory of web service
                                 """;
                     break;
                 case "ping":
