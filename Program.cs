@@ -73,8 +73,8 @@ namespace Glibs.Learning.WebApp
             // ping [GET]
             app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) => 
             {
-                _logger.LogInformation("{DateTime} # Received '{path}' request with options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(), _httpContext.Request.Path, 
-                    output, delay);
+                _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(), 
+                    _httpContext.Request.Path, output, delay);
                 string pingReply = ResponseHelper.PingReply(hostAddress);
                 if (int.TryParse(delay??"", out int delaySec))
                 {
@@ -85,7 +85,7 @@ namespace Glibs.Learning.WebApp
                 }
                 if ((output??"").ToLower().Equals("json"))
                 {
-                    return Results.Json(new ResponceJson { Response = ResponseHelper.PingReply(pingReply) }, ResponseHelper.JsonSerializingOptions());
+                    return Results.Json(new ResponceJson { Response = pingReply }, ResponseHelper.JsonSerializingOptions());
                 }
                 else
                 {
@@ -308,6 +308,20 @@ namespace Glibs.Learning.WebApp
             await Task.CompletedTask;
         }
     }
+    public static class ResponseHelper
+    {
+        public static JsonSerializerOptions JsonSerializingOptions()
+        {
+            return new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
+        }
+        public static string PingReply(string _host)
+        {
+            return $"""
+                    {_host} is alive!
+                    Use '/HELP' command for commands help.
+                    """;
+        }
+    }
     public enum ContentType
     {
         Text = 0,
@@ -325,54 +339,5 @@ namespace Glibs.Learning.WebApp
     public struct ApplicationServices
     {
         public IEnumerable<ApplicationService> ApplicationService { get; set; }
-    }
-    public static class ResponseHelper
-    {
-        public static JsonSerializerOptions JsonSerializingOptions()
-        {
-            return new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
-        }
-        public static string PingReply(string _host)
-        {
-            return  $"""
-                    {_host} is alive!
-                    Use '/HELP' command for commands help.
-                    """;
-        }
-        public static ContentType? GetContentType(HttpContext _context, out bool _isOK, out string _responseText)
-        {
-            ContentType? contentType = null;
-            _isOK = false;
-            _responseText = "";
-            string[] outputOpt = _context.Request.Query["output"].ToArray();
-            if (outputOpt.Length == 0)
-            {
-                _isOK = true;
-                contentType = null;
-            }
-            else if (outputOpt.Length > 1)
-            {
-                _isOK = false;
-                contentType = null;
-                _responseText = "Only one 'output' option is allowed";
-            }
-            else if (outputOpt.Length == 1)
-            {
-                switch (outputOpt[0].ToLower())
-                {
-                    case "text":
-                        break;
-                    case "json":
-                        contentType = ContentType.Json;
-                        break;
-                    default:
-                        //ret = false;
-                        //statusCode = StatusCodes.Status400BadRequest;
-                        //responceText = $"Not allowed output {_outputOpt[0]}.";
-                        break;
-                }
-            }
-            return contentType;
-        }
     }
 }
