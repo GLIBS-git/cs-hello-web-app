@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http.Extensions;
 using System.Collections;
 using System.Net.Mime;
 using System.Text;
-using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -73,6 +72,20 @@ namespace Glibs.Learning.WebApp
             });
             // ping [GET]
             app.MapGet("/api/v1/ping", Program.ProcessGetPing);
+            // ping-2 [GET]
+            app.MapGet("/api/v1/ping-2", (HttpContext _httpContext, ILogger<Program> _logger, string? output) => 
+            {
+                _logger.LogInformation("{DateTime} # Received 'ping-2' command.", DateTime.Now.ToString());
+                if ((output??"").ToLower().Equals("json"))
+                {
+
+                }
+                else
+                {
+                    return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
+                }
+            }
+            );
             // pwd [GET]
             app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
@@ -143,7 +156,7 @@ namespace Glibs.Learning.WebApp
             //Console.WriteLine($"{dt.ToShortDateString()} {dt.ToLongTimeString()}");
             Console.WriteLine(dt.ToString());
             Console.WriteLine();
-            _httpContext.RequestServices.GetService<IConsoleLogService>().Log("Test logging!");
+            _httpContext.RequestServices.GetService<IConsoleLogService>()?.Log("Test logging!");
 
             //_httpContext.Response.WriteAsync("").Wait();
             //foreach (string? _param in _httpRequest.Query["a"].ToArray())
@@ -267,7 +280,7 @@ namespace Glibs.Learning.WebApp
             //Console.WriteLine($"{dt.ToShortDateString()} {dt.ToLongTimeString()}");
             Console.WriteLine(dt.ToString());
             Console.WriteLine();
-            this.WebApp.Services.GetService<IConsoleLogService>().Log("Test logging!");
+            this.WebApp.Services.GetService<IConsoleLogService>()?.Log("Test logging!");
             //_httpContext.Response.WriteAsync("").Wait();
             //foreach (string? _param in _httpRequest.Query["a"].ToArray())
             //{
