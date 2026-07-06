@@ -51,6 +51,16 @@ namespace Glibs.Learning.WebApp
                 }
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, ResponseHelper.JsonSerializingOptions());
             });
+            // test [GET]
+            app.MapGet("/api/v1/debug/test", WebRequestProcessor.ProcessGetTest_2);
+            // test-1 [GET]
+            app.MapGet("/api/v1/debug/test-1", requestProcessor.ProcessGetTest);
+            // test-2 [GET]
+            app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                return Results.Text("OK.");
+            }
+            );
             // exit [POST]
             app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
@@ -101,10 +111,6 @@ namespace Glibs.Learning.WebApp
                 _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
-            // test [GET]
-            app.MapGet("/api/v1/test", WebRequestProcessor.ProcessGetTest_2);
-            // test-1 [GET]
-            app.MapGet("/api/v1/test-1", requestProcessor.ProcessGetTest);
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
@@ -121,20 +127,19 @@ namespace Glibs.Learning.WebApp
                                 Welcome to Glibs's \"Hello world\" web service!
 
                                 Use commands:
+                                DEBUG/TEST -- command for testing something.
+                                DEBUG/TEST1 -- another command for testing something.
+                                DEBUG/TEST2 -- one more command for testing something.
                                 EXIT -- stop current web service.
                                 HELP -- get this help.
                                 HELP/<command> -- get detailed help about certain command.
                                 PING -- test connection.
                                 PING-OLD -- test connection, old version (method instead of lambda).
                                 PWD -- shows current directory of web service
-                                TEST -- command for testing something.
-                                TEST1 -- another command for testing something.
-                                TEST2 -- one more command for testing something.
-                                
-                                All commands accept query option output=<responce-format> where <responce-format> may be 'text' or 'json'. Default is text responce format.
                                 """;
                     break;
                 case "ping":
+                case "ping-old":
                     helpText = """
                                 Query options:
                         
