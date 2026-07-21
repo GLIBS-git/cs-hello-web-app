@@ -33,6 +33,10 @@ namespace Glibs.Learning.WebApp
 
             WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
 
+            app.Use(async (context, next) => {
+                Console.WriteLine("A-la logging...");
+                await next.Invoke();
+            });
             // / [GET]
             app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
@@ -83,6 +87,11 @@ namespace Glibs.Learning.WebApp
             app.MapGet("/api/v1/test", Program.ProcessGetTest);
             // test-1 [GET]
             app.MapGet("/api/v1/test-1", requestProcessor.ProcessGetTest);
+            // Test use
+            app.Use(async (context, next) => {
+                Console.WriteLine("A-la one more logging...");
+                await next.Invoke();
+            });
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
