@@ -19,7 +19,6 @@ namespace Glibs.Learning.WebApp
         {
             String hostAddress = "http://localhost:5050"; // Office
             //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-            //WebApplicationOptions options = new WebApplicationOptions() { ApplicationName = "Test applicatin" }; // Not working. What is this? Loads file.
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -109,6 +108,15 @@ namespace Glibs.Learning.WebApp
             {
                 _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
+            });
+            // sys-info [GET]
+            app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
+                SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
+                    _httpContext.Connection.LocalPort.ToString(), 
+                    app.Environment.EnvironmentName);
+                return Results.Ok(sysInfo);
             });
 
             Console.WriteLine($"{DateTime.Now.ToString()} # Starting web service at {hostAddress}...");
@@ -217,6 +225,7 @@ namespace Glibs.Learning.WebApp
     {
         public IEnumerable<ApplicationService> ApplicationService { get; set; }
     }
+    public record SysInfo(string Host, string Port, string Environment);
     // ########################### Obsolete ##################################
     public class WebRequestProcessor
     {
