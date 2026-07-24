@@ -87,18 +87,12 @@ namespace Glibs.Learning.WebApp
                 if (int.TryParse(delay ?? "", out int delaySec))
                 {
                     if (delaySec > 0)
-                    {
                         await Task.Delay(delaySec * 1000);
-                    }
                 }
                 if ((output ?? "").ToLower().Equals("json"))
-                {
                     return Results.Json(new ResponceJson { Response = pingReply }, ResponseHelper.JsonSerializingOptions());
-                }
                 else
-                {
                     return Results.Text($"{pingReply}");
-                }
             }
             );
             // ping-old [GET]
