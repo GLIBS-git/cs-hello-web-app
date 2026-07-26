@@ -120,7 +120,9 @@ namespace Glibs.Learning.WebApp
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
                     _httpContext.Connection.LocalPort.ToString(), 
-                    app.Environment.EnvironmentName);
+                    app.Environment.EnvironmentName,
+                    "",
+                    "");
                 return Results.Ok(sysInfo);
             });
 
@@ -229,7 +231,7 @@ namespace Glibs.Learning.WebApp
                     """;
         }
     }
-    public record SysInfo(string Host, string Port, string Environment);
+    public record SysInfo(string Host, string Port, string Environment, string StartTime, string ActiveTime);
     public struct ApplicationService
     {
         public string Name { get; set; }
