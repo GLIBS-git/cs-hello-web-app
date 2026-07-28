@@ -1,18 +1,42 @@
-﻿using System.Text;
+﻿using Microsoft.AspNetCore.Builder;
+using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Glibs.Learning.WebApp
 {
     public class Archieve
     {
+        //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+        //static WebApplicationOptions options = new WebApplicationOptions() { EnvironmentName = "Test" };
+        //WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
+        //builder.WebHost.UseUrls(hostAddress); // Only one address works
+        //builder.Services.AddScoped<ILogger>();
+        //IServiceCollection serviceCollection = builder.Services;
+        //builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
+        //builder.Services.AddSingleton<IConsoleLogService, LogService>();
+        //builder.Services.AddHostedService<TestBackgroungService>();
+        //static WebApplication app = builder.Build();
         //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
         // test [GET]
         //app.MapGet("/api/v1/debug/test", WebRequestProcessor.ProcessGetTest_2);
         // test-1 [GET]
         //app.MapGet("/api/v1/debug/test-1", requestProcessor.ProcessGetTest);
+        //app.Use(async (context, next) => {
+        //        Console.WriteLine("A-la logging before...");
+        //        await next.Invoke();
+        //        Console.WriteLine("A-la logging after...");
+        //});
+        //        app.Use(async (context, next) => {
+        //        Console.WriteLine("A-la one more logging before...");
+        //        await next.Invoke();
+        //        Console.WriteLine("A-la one more logging after...");
+        //});
+
+
 
     }
-    // ########################### Obsolete ##################################
-    public class WebRequestProcessor
+// ########################### Obsolete ##################################
+public class WebRequestProcessor
     {
         public WebApplication? WebApp = null;
         public WebRequestProcessor(WebApplication _webApp)

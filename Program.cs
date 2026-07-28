@@ -24,8 +24,8 @@ namespace Glibs.Learning.WebApp
         public static void StartWebService(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
-            String hostAddress = "http://localhost:5050"; // Office
-            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+            //String hostAddress = "http://localhost:5050"; // Office
+            String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -35,12 +35,6 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
             WebApplication app = builder.Build();
-
-            app.Use(async (context, next) => {
-                Console.WriteLine("A-la logging before...");
-                await next.Invoke();
-                Console.WriteLine("A-la logging after...");
-            });
 
             // / [GET]
             app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
@@ -124,12 +118,6 @@ namespace Glibs.Learning.WebApp
                     "",
                     "");
                 return Results.Ok(sysInfo);
-            });
-
-            app.Use(async (context, next) => {
-                Console.WriteLine("A-la one more logging before...");
-                await next.Invoke();
-                Console.WriteLine("A-la one more logging after...");
             });
 
             Console.WriteLine($"{commonBuffer.serviceStartTime.ToString()} # Starting web service at {hostAddress}...");
