@@ -115,14 +115,11 @@ namespace Glibs.Learning.WebApp
             });
             // sys-info [GET]
             app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
-            //app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
                     _httpContext.Connection.LocalPort.ToString(), 
                     app.Environment.EnvironmentName,
-                    //"",
-                    //""
                     _commandBuffer.ServiceStartTime.ToString(),
                     (DateTime.Now - _commandBuffer.ServiceStartTime).ToString()
                 );
