@@ -24,8 +24,8 @@ namespace Glibs.Learning.WebApp
         public static void StartWebService(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
-            //String hostAddress = "http://localhost:5050"; // Office
-            String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+            String hostAddress = "http://localhost:5050"; // Office
+            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -54,6 +54,20 @@ namespace Glibs.Learning.WebApp
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
                 }
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, ResponseHelper.JsonSerializingOptions());
+            });
+            // debug/test [GET]
+            app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
+                return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
+            });
+            // debug/test-1 [GET]
+            //app.MapGet("/api/v1/debug/test-1", requestProcessor.ProcessGetTest);
+            // debug/test-2 [GET]
+            app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
+                return Results.Text("OK.");
             });
             // exit [POST]
             app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
@@ -99,28 +113,23 @@ namespace Glibs.Learning.WebApp
                 _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
-            // test [GET]
-            //app.MapGet("/api/v1/debug/test", WebRequestProcessor.ProcessGetTest_2);
-            // test-1 [GET]
-            //app.MapGet("/api/v1/debug/test-1", requestProcessor.ProcessGetTest);
-            // test-2 [GET]
-            app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
-            {
-                return Results.Text("OK.");
-            });
             // sys-info [GET]
-            app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
+            //app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
                     _httpContext.Connection.LocalPort.ToString(), 
                     app.Environment.EnvironmentName,
-                    "",
-                    "");
+                    //"",
+                    //""
+                    _commandBuffer.ServiceStartTime.ToString(),
+                    (DateTime.Now - _commandBuffer.ServiceStartTime).ToString()
+                );
                 return Results.Ok(sysInfo);
             });
 
-            Console.WriteLine($"{commonBuffer.serviceStartTime.ToString()} # Starting web service at {hostAddress}...");
+            Console.WriteLine($"{commonBuffer.ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
             app.Run();
         }
         // ############################################################################################################################################
@@ -145,6 +154,7 @@ namespace Glibs.Learning.WebApp
                                 PING-OLD (get) -- test connection, old version (method instead of lambda).
                                         More details on: help/ping-old
                                 PWD (get) -- shows current directory of web service
+                                SYS-INFO (get) -- shows service state
                                 """;
                     break;
                 case "ping":
@@ -165,13 +175,15 @@ namespace Glibs.Learning.WebApp
     }
     public interface ICommonBuffer
     {
+        public DateTime ServiceStartTime { get; }
     }
     public class CommonBuffer : ICommonBuffer
     {
-        public readonly DateTime serviceStartTime;
+        //public readonly DateTime serviceStartTime;
+        public DateTime ServiceStartTime { get; } = DateTime.Now ;
         public CommonBuffer()
         {
-            this.serviceStartTime = DateTime.Now;
+            //this.serviceStartTime = DateTime.Now;
         }
     }
     public interface IConsoleLogService
