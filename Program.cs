@@ -187,13 +187,8 @@ namespace Glibs.Learning.WebApp
     }
     public class CommonBuffer : ICommonBuffer
     {
-        //public readonly DateTime serviceStartTime;
         public DateTime ServiceStartTime { get; } = DateTime.Now ;
         public string MachineName { get; } = Environment.MachineName ;
-        public CommonBuffer()
-        {
-            //this.serviceStartTime = DateTime.Now;
-        }
     }
     public record SysInfo(string Host, string Port, string Machine, string Environment, string StartTime, string ActiveTime);
     public interface IConsoleLogService
