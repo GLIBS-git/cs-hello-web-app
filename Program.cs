@@ -12,15 +12,17 @@ namespace Glibs.Learning.WebApp
 {
     public class Program
     {
-        public static readonly JsonSerializerOptions JsonOptionsOut = new JsonSerializerOptions() 
-        { 
-            WriteIndented = true, 
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault 
-        };
         public static void Main(string[] args)
         {
             Program.StartWebService(args);
         }
+        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+        public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
         public static void StartWebService(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
@@ -29,6 +31,12 @@ namespace Glibs.Learning.WebApp
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
+            builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
+            {
+                options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.SerializerOptions.WriteIndented = true;
+                options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+            });
             //builder.Services.AddScoped<ILogger>();
             IServiceCollection serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
@@ -53,7 +61,7 @@ namespace Glibs.Learning.WebApp
                 {
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
                 }
-                return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, ResponseHelper.JsonSerializingOptions());
+                return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/test [GET]
             app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
@@ -100,7 +108,7 @@ namespace Glibs.Learning.WebApp
                         await Task.Delay(delaySec * 1000);
                 }
                 if ((output ?? "").ToLower().Equals("json"))
-                    return Results.Json(new ResponceJson { Response = pingReply }, ResponseHelper.JsonSerializingOptions());
+                    return Results.Json(new ResponceJson { Response = pingReply }, Program.jsonOptionsEncode);
                 else
                     return Results.Text($"{pingReply}");
             }
@@ -216,10 +224,6 @@ namespace Glibs.Learning.WebApp
     }
     public static class ResponseHelper
     {
-        public static JsonSerializerOptions JsonSerializingOptions()
-        {
-            return new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
-        }
         public static string PingReply(string _host)
         {
             return $"""

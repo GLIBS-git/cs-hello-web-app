@@ -157,7 +157,7 @@ public class WebRequestProcessor
                     result = Results.Text(_text, "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
                     break;
                 case ContentType.Json:
-                    result = Results.Json(new ResponceJson { Response = _text }, ResponseHelper.JsonSerializingOptions(), "application/json; charset=utf-8", _statusCode);
+                    result = Results.Json(new ResponceJson { Response = _text }, Program.jsonOptionsEncode, "application/json; charset=utf-8", _statusCode);
                     break;
             }
             return result;
