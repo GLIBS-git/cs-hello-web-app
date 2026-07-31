@@ -126,7 +126,8 @@ namespace Glibs.Learning.WebApp
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
-                    _httpContext.Connection.LocalPort.ToString(), 
+                    _httpContext.Connection.LocalPort.ToString(),
+                    _commandBuffer.MachineName,
                     app.Environment.EnvironmentName,
                     _commandBuffer.ServiceStartTime.ToString(),
                     (DateTime.Now - _commandBuffer.ServiceStartTime).ToString()
@@ -181,16 +182,19 @@ namespace Glibs.Learning.WebApp
     public interface ICommonBuffer
     {
         public DateTime ServiceStartTime { get; }
+        public string MachineName { get; }
     }
     public class CommonBuffer : ICommonBuffer
     {
         //public readonly DateTime serviceStartTime;
         public DateTime ServiceStartTime { get; } = DateTime.Now ;
+        public string MachineName { get; } = Environment.MachineName ;
         public CommonBuffer()
         {
             //this.serviceStartTime = DateTime.Now;
         }
     }
+    public record SysInfo(string Host, string Port, string Machine, string Environment, string StartTime, string ActiveTime);
     public interface IConsoleLogService
     {
         void Log(string _message);
@@ -211,13 +215,8 @@ namespace Glibs.Learning.WebApp
             while (!_ct.IsCancellationRequested)
             {
                 Console.WriteLine($"{DateTime.Now.ToString()}    Background service is working.");
-                try
-                {
-                    await Task.Delay(60000, _ct);
-                }
-                catch (TaskCanceledException _)
-                {
-                }
+                try { await Task.Delay(60000, _ct); }
+                catch (TaskCanceledException _) { }
             }
             await Task.CompletedTask;
         }
@@ -232,7 +231,6 @@ namespace Glibs.Learning.WebApp
                     """;
         }
     }
-    public record SysInfo(string Host, string Port, string Environment, string StartTime, string ActiveTime);
     public struct ApplicationService
     {
         public string Name { get; set; }
