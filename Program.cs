@@ -150,17 +150,18 @@ namespace Glibs.Learning.WebApp
                                 Welcome to Glibs's 'Hello world' web service!
 
                                 Use commands:
+                                DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
                                 DEBUG/TEST (get) -- command for testing something.
                                 DEBUG/TEST1 (get) -- another command for testing something.
                                 DEBUG/TEST2 (get) -- one more command for testing something.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
                                 PING (get) -- test connection.
-                                        More details on: help/ping
-                                PING-OLD (get) -- test connection, old version (method instead of lambda).
-                                        More details on: help/ping-old
-                                PWD (get) -- shows current directory of web service
-                                SYS-INFO (get) -- shows service state
+                                        More details on: help/ping.
+                                PING-OLD (get) -- test connection, old version (delegate method instead of lambda).
+                                        More details on: help/ping-old.
+                                PWD (get) -- shows current directory of web service.
+                                SYS-INFO (get) -- shows service state (start time and so on).
                                 """;
                     break;
                 case "ping":
