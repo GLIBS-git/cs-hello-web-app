@@ -28,9 +28,9 @@ namespace Glibs.Learning.WebApp
         public static void Main(string[] args)
         {
             Program.BuildApplication(args);
-            Program.StartWebService();
-            Console.WriteLine($"{app.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
-            app.Run();
+            Program.AddMappings();
+            Console.WriteLine($"{app?.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
+            app?.Run();
         }
         static void BuildApplication(string[] _args)
         {
@@ -52,10 +52,10 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddMemoryCache();
             app = builder.Build();
         }
-        public static void StartWebService()
+        public static void AddMappings()
         {
             // / [GET]
-            app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
                 //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
@@ -63,7 +63,7 @@ namespace Glibs.Learning.WebApp
                 return Results.Text(Program.GetHelp(""));
             });
             // debug/appl-services [GET]
-            app.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
@@ -74,13 +74,14 @@ namespace Glibs.Learning.WebApp
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/test [GET]
-            app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
-                return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
+                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
+                return Results.Redirect("http://localhost:5050/api/v1/debug/test-2", true);
             });
             // debug/test-1 [GET]
-            app.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
+            app?.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
                 _cache.Set("001", "001");
@@ -90,32 +91,32 @@ namespace Glibs.Learning.WebApp
                 return Results.Text("OK.");
             });
             // debug/test-2 [GET]
-            app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
                 return Results.Text("OK.");
             });
             // exit [POST]
-            app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
                 return Results.Text("{DateTime} # Stopping web service...", DateTime.Now.ToString());
             });
             // help [GET]
-            app.MapGet("/api/v1/help", () =>
+            app?.MapGet("/api/v1/help", () =>
             {
                 Console.WriteLine($"Received help command.");
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
             // help/<command> [GET]
-            app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext) =>
+            app?.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext) =>
             {
                 Console.WriteLine($"Received 'help/{_helpCommand}' command.");
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) =>
+            app?.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) =>
             {
                 _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(),
                     _httpContext.Request.Path, output, delay);
@@ -132,15 +133,15 @@ namespace Glibs.Learning.WebApp
             }
             );
             // ping-old [GET]
-            app.MapGet("/api/v1/ping-old", WebRequestProcessor.ProcessGetPing);
+            app?.MapGet("/api/v1/ping-old", WebRequestProcessor.ProcessGetPing);
             // pwd [GET]
-            app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            app?.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
             // sys-info [GET]
-            app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
+            app?.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
