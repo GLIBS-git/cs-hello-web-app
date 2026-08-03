@@ -17,8 +17,8 @@ namespace Glibs.Learning.WebApp
         static WebApplication? app = null;
         static readonly string hostAddress = "http://localhost:5050"; // Office
         //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-        static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
-        static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
+        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+        public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
         {
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
@@ -78,7 +78,8 @@ namespace Glibs.Learning.WebApp
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
                 //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
-                return Results.Redirect("http://localhost:5050/api/v1/debug/test-2", true);
+                //return Results.Redirect("http://localhost:5050/api/v1/sys-info", true);
+                return Results.Redirect("http://localhost:5050/api/v1/sys-info", false);
             });
             // debug/test-1 [GET]
             app?.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
@@ -101,18 +102,18 @@ namespace Glibs.Learning.WebApp
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
-                return Results.Text("{DateTime} # Stopping web service...", DateTime.Now.ToString());
+                return Results.Text($"{DateTime.Now.ToString()} # Stopping web service...");
             });
             // help [GET]
-            app?.MapGet("/api/v1/help", () =>
+            app?.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
-                Console.WriteLine($"Received help command.");
+                _logger.LogInformation("{DateTime} # Received 'help' command.", DateTime.Now.ToString());
                 return Results.Text(Program.GetHelp(""), contentType: "text/plain");
             });
             // help/<command> [GET]
-            app?.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext) =>
+            app?.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
             {
-                Console.WriteLine($"Received 'help/{_helpCommand}' command.");
+                _logger.LogInformation("{DateTime} # Received 'help/{_helpCommand}' command.", DateTime.Now.ToString());
                 return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
@@ -137,7 +138,7 @@ namespace Glibs.Learning.WebApp
             // pwd [GET]
             app?.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'current-directory' command.", DateTime.Now.ToString());
+                _logger.LogInformation("{DateTime} # Received 'pwd' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
             // sys-info [GET]
