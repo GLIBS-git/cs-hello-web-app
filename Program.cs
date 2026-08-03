@@ -92,7 +92,7 @@ namespace Glibs.Learning.WebApp
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
-                return Results.Text("Stopping web service...");
+                return Results.Text("{DateTime} # Stopping web service...", DateTime.Now.ToString());
             });
             // help [GET]
             app.MapGet("/api/v1/help", () =>
