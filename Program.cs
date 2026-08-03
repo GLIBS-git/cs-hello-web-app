@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Collections;
 using System.Net.Mime;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,22 +14,27 @@ namespace Glibs.Learning.WebApp
 {
     public class Program
     {
-        public static void Main(string[] args)
-        {
-            Program.StartWebService(args);
-        }
-        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
-        public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
+        static WebApplication? app = null;
+        static readonly string hostAddress = "http://localhost:5050"; // Office
+        //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+        static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+        static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
         {
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
-        public static void StartWebService(string[] _args)
+        static IServiceCollection? serviceCollection = null;
+        public static void Main(string[] args)
+        {
+            Program.BuildApplication(args);
+            Program.StartWebService();
+            Console.WriteLine($"{app.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
+            app.Run();
+        }
+        static void BuildApplication(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
-            String hostAddress = "http://localhost:5050"; // Office
-            //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
             WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
@@ -39,13 +45,15 @@ namespace Glibs.Learning.WebApp
                 options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
             });
             //builder.Services.AddScoped<ILogger>();
-            IServiceCollection serviceCollection = builder.Services;
+            serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
             builder.Services.AddMemoryCache();
-            WebApplication app = builder.Build();
-
+            app = builder.Build();
+        }
+        public static void StartWebService()
+        {
             // / [GET]
             app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
@@ -144,9 +152,6 @@ namespace Glibs.Learning.WebApp
                 );
                 return Results.Ok(sysInfo);
             });
-
-            Console.WriteLine($"{commonBuffer.ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
-            app.Run();
         }
         // ############################################################################################################################################
         public static string GetHelp(string _command)
