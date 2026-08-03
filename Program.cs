@@ -14,7 +14,6 @@ namespace Glibs.Learning.WebApp
 {
     public class Program
     {
-        static WebApplication? app = null;
         static readonly string hostAddress = "http://localhost:5050"; // Office
         //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
         public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
@@ -27,12 +26,13 @@ namespace Glibs.Learning.WebApp
         static IServiceCollection? serviceCollection = null;
         public static void Main(string[] args)
         {
-            Program.BuildApplication(args);
-            Program.AddMappings();
+            WebApplicationBuilder builder = Program.BuildApplication(args);
+            WebApplication app = builder.Build();
+            Program.AddMappings(app);
             Console.WriteLine($"{app?.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
             app?.Run();
         }
-        static void BuildApplication(string[] _args)
+        static WebApplicationBuilder BuildApplication(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
             WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
@@ -50,20 +50,20 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
             builder.Services.AddMemoryCache();
-            app = builder.Build();
+            return builder;
         }
-        public static void AddMappings()
+        public static void AddMappings(WebApplication _app)
         {
             // / [GET]
-            app?.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
                 //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
-                //return Results.Text(Program.GetHelp(""), contentType: "text/plain");
-                return Results.Text(Program.GetHelp(""));
+                //return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
+                return Results.Text(ResponseHelper.GetHelp(""));
             });
             // debug/appl-services [GET]
-            app?.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
@@ -74,7 +74,7 @@ namespace Glibs.Learning.WebApp
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/test [GET]
-            app?.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
                 //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
@@ -82,7 +82,7 @@ namespace Glibs.Learning.WebApp
                 return Results.Redirect("http://localhost:5050/api/v1/sys-info", false);
             });
             // debug/test-1 [GET]
-            app?.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
+            _app.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
                 _cache.Set("001", "001");
@@ -92,32 +92,32 @@ namespace Glibs.Learning.WebApp
                 return Results.Text("OK.");
             });
             // debug/test-2 [GET]
-            app?.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
                 return Results.Text("OK.");
             });
             // exit [POST]
-            app?.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
                 return Results.Text($"{DateTime.Now.ToString()} # Stopping web service...");
             });
             // help [GET]
-            app?.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'help' command.", DateTime.Now.ToString());
-                return Results.Text(Program.GetHelp(""), contentType: "text/plain");
+                return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
             });
             // help/<command> [GET]
-            app?.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'help/{_helpCommand}' command.", DateTime.Now.ToString());
-                return Results.Text(Program.GetHelp(_helpCommand), contentType: "text/plain");
+                _logger.LogInformation("{DateTime} # Received 'help/{_helpCommand}' command.", DateTime.Now.ToString(), _helpCommand);
+                return Results.Text(ResponseHelper.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            app?.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) =>
+            _app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) =>
             {
                 _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(),
                     _httpContext.Request.Path, output, delay);
@@ -134,67 +134,26 @@ namespace Glibs.Learning.WebApp
             }
             );
             // ping-old [GET]
-            app?.MapGet("/api/v1/ping-old", WebRequestProcessor.ProcessGetPing);
+            _app.MapGet("/api/v1/ping-old", WebRequestProcessor.ProcessGetPing);
             // pwd [GET]
-            app?.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'pwd' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
             // sys-info [GET]
-            app?.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
+            _app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
                     _httpContext.Connection.LocalPort.ToString(),
                     _commandBuffer.MachineName,
-                    app.Environment.EnvironmentName,
+                    _app.Environment.EnvironmentName,
                     _commandBuffer.ServiceStartTime.ToString(),
                     (DateTime.Now - _commandBuffer.ServiceStartTime).ToString()
                 );
                 return Results.Ok(sysInfo);
             });
-        }
-        // ############################################################################################################################################
-        public static string GetHelp(string _command)
-        {
-            _command ??= "";
-            string helpText = "";
-            switch (_command.ToLower())
-            {
-                case "":
-                    helpText = """
-                                Welcome to Glibs's 'Hello world' web service!
-
-                                Use commands:
-                                DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
-                                DEBUG/TEST (get) -- command for testing something.
-                                DEBUG/TEST1 (get) -- another command for testing something.
-                                DEBUG/TEST2 (get) -- one more command for testing something.
-                                EXIT (post) -- stop current web service.
-                                HELP (get) -- get this help.
-                                PING (get) -- test connection.
-                                        More details on: help/ping.
-                                PING-OLD (get) -- test connection, old version (delegate method instead of lambda).
-                                        More details on: help/ping-old.
-                                PWD (get) -- shows current directory of web service.
-                                SYS-INFO (get) -- shows service state (start time and so on).
-                                """;
-                    break;
-                case "ping":
-                case "ping-old":
-                    helpText = """
-                                Query options:
-                        
-                                output=<text/json> -- sets responce format as text or JSON.
-                                timeout=<seconds> -- returns responce with delay. <seconds> must be integer.
-                                """;
-                    break;
-                default:
-                    helpText = $"No help for command '{_command}' awailable.";
-                    break;
-            }
-            return helpText;
         }
     }
     public interface ICommonBuffer
@@ -242,6 +201,46 @@ namespace Glibs.Learning.WebApp
                     {_host} is alive!
                     Use '/HELP' command for commands help.
                     """;
+        }
+        public static string GetHelp(string _command)
+        {
+            _command ??= "";
+            string helpText = "";
+            switch (_command.ToLower())
+            {
+                case "":
+                    helpText = """
+                                Welcome to Glibs's 'Hello world' web service!
+
+                                Use commands:
+                                DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
+                                DEBUG/TEST (get) -- command for testing something.
+                                DEBUG/TEST1 (get) -- another command for testing something.
+                                DEBUG/TEST2 (get) -- one more command for testing something.
+                                EXIT (post) -- stop current web service.
+                                HELP (get) -- get this help.
+                                PING (get) -- test connection.
+                                        More details on: help/ping.
+                                PING-OLD (get) -- test connection, old version (delegate method instead of lambda).
+                                        More details on: help/ping-old.
+                                PWD (get) -- shows current directory of web service.
+                                SYS-INFO (get) -- shows service state (start time and so on).
+                                """;
+                    break;
+                case "ping":
+                case "ping-old":
+                    helpText = """
+                                Query options:
+                        
+                                output=<text/json> -- sets responce format as text or JSON.
+                                timeout=<seconds> -- returns responce with delay. <seconds> must be integer.
+                                """;
+                    break;
+                default:
+                    helpText = $"No help for command '{_command}' awailable.";
+                    break;
+            }
+            return helpText;
         }
     }
     public struct ApplicationService
