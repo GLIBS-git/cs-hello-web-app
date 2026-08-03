@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Collections;
 using System.Net.Mime;
@@ -42,6 +43,7 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
+            builder.Services.AddMemoryCache();
             WebApplication app = builder.Build();
 
             // / [GET]
@@ -70,7 +72,15 @@ namespace Glibs.Learning.WebApp
                 return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
             });
             // debug/test-1 [GET]
-            //app.MapGet("/api/v1/debug/test-1", requestProcessor.ProcessGetTest);
+            app.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
+                _cache.Set("001", "001");
+                _cache.Set("002", 2);
+                _cache.TryGetValue("001", out string? _value);
+                Console.WriteLine(_value);
+                return Results.Text("OK.");
+            });
             // debug/test-2 [GET]
             app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
