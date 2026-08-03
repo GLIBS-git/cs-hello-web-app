@@ -28,9 +28,14 @@ namespace Glibs.Learning.WebApp
         {
             WebApplicationBuilder builder = Program.BuildApplication(args);
             WebApplication app = builder.Build();
+            Program.SetupWebApp(app);
             Program.AddMappings(app);
             Console.WriteLine($"{app?.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
-            app?.Run();
+            app.Run();
+        }
+        static void SetupWebApp(WebApplication _app)
+        {
+            _app.UseResponseCompression();
         }
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
@@ -44,12 +49,13 @@ namespace Glibs.Learning.WebApp
                 options.SerializerOptions.WriteIndented = true;
                 options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
             });
+            builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
+            builder.Services.AddMemoryCache();
             //builder.Services.AddScoped<ILogger>();
             serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroungService>();
-            builder.Services.AddMemoryCache();
             return builder;
         }
         public static void AddMappings(WebApplication _app)
