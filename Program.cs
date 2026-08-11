@@ -1,12 +1,4 @@
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Collections;
-using System.Net.Mime;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -16,7 +8,7 @@ namespace Glibs.Learning.WebApp
     {
         static readonly string hostAddress = "http://localhost:5050"; // Office
         //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }; // Reserved for furture
         public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
         {
             WriteIndented = true,
@@ -40,8 +32,7 @@ namespace Glibs.Learning.WebApp
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
             CommonBuffer commonBuffer = new CommonBuffer();
-            WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" };
-            WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
+            WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             builder.WebHost.UseUrls(hostAddress); // Only one address works
             builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
             {
@@ -74,18 +65,16 @@ namespace Glibs.Learning.WebApp
                 _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
                 foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
-                {
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
-                }
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/test [GET]
             _app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
-                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" });
-                //return Results.Redirect("http://localhost:5050/api/v1/sys-info", true);
-                return Results.Redirect("http://localhost:5050/api/v1/sys-info", false);
+                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
+                //return Results.Redirect("/api/v1/sys-info", permanent: true);
+                return Results.Redirect("/api/v1/sys-info", permanent: false);
             });
             // debug/test-1 [GET]
             _app.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 

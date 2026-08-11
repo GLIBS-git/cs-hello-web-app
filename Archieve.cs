@@ -7,7 +7,7 @@ namespace Glibs.Learning.WebApp
     public class Archieve
     {
         //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
-        //static WebApplicationOptions options = new WebApplicationOptions() { EnvironmentName = "Test" };
+        //WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" }; // From launchSettings.json now comes "ASPNETCORE_ENVIRONMENT": "Development"
         //WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
         //builder.WebHost.UseUrls(hostAddress); // Only one address works
         //builder.Services.AddScoped<ILogger>();
@@ -35,8 +35,8 @@ namespace Glibs.Learning.WebApp
 
 
     }
-// ########################### Obsolete ##################################
-public class WebRequestProcessor
+    // ########################### Obsolete ##################################
+    public class WebRequestProcessor
     {
         public WebApplication? WebApp = null;
         public WebRequestProcessor(WebApplication _webApp)
