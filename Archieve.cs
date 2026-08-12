@@ -6,7 +6,8 @@ namespace Glibs.Learning.WebApp
 {
     public class Archieve
     {
-        //String hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
+        //static readonly string hostAddress = "http://localhost:5050"; // Office
+        //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
         //WebApplicationOptions options = new WebApplicationOptions() { Args = _args, EnvironmentName = "Test" }; // From launchSettings.json now comes "ASPNETCORE_ENVIRONMENT": "Development"
         //WebApplicationBuilder builder = WebApplication.CreateBuilder(options);
         //builder.WebHost.UseUrls(hostAddress); // Only one address works

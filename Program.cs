@@ -6,8 +6,6 @@ namespace Glibs.Learning.WebApp
 {
     public class Program
     {
-        static readonly string hostAddress = "http://localhost:5050"; // Office
-        //static readonly string hostAddress = "http://192.168.0.157:5050"; // Home MS VS VM
         public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }; // Reserved for furture
         public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
         {
@@ -22,8 +20,9 @@ namespace Glibs.Learning.WebApp
             WebApplication app = builder.Build();
             Program.SetupWebApp(app);
             Program.AddMappings(app);
-            Console.WriteLine($"{app?.Services.GetRequiredService<ICommonBuffer>().ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
-            app.Run();
+            ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
+            Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {commonBuffer?.Host}...");
+            app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
         {
@@ -31,9 +30,8 @@ namespace Glibs.Learning.WebApp
         }
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
-            CommonBuffer commonBuffer = new CommonBuffer();
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
-            builder.WebHost.UseUrls(hostAddress); // Only one address works
+            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://localhost:5050" };
             builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -46,7 +44,7 @@ namespace Glibs.Learning.WebApp
             serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
-            builder.Services.AddHostedService<TestBackgroungService>();
+            builder.Services.AddHostedService<TestBackgroundService>();
             return builder;
         }
         public static void AddMappings(WebApplication _app)
@@ -112,11 +110,11 @@ namespace Glibs.Learning.WebApp
                 return Results.Text(ResponseHelper.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            _app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, string? output, string? delay) =>
+            _app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer, string? output, string? delay) =>
             {
                 _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(),
                     _httpContext.Request.Path, output, delay);
-                string pingReply = ResponseHelper.PingReply(hostAddress);
+                string pingReply = ResponseHelper.PingReply(_commandBuffer.Host);
                 if (int.TryParse(delay ?? "", out int delaySec))
                 {
                     if (delaySec > 0)
@@ -155,11 +153,13 @@ namespace Glibs.Learning.WebApp
     {
         public DateTime ServiceStartTime { get; }
         public string MachineName { get; }
+        public string? Host { get; init; }
     }
     public class CommonBuffer : ICommonBuffer
     {
         public DateTime ServiceStartTime { get; } = DateTime.Now ;
         public string MachineName { get; } = Environment.MachineName ;
+        public string? Host { get; init; } 
     }
     public record SysInfo(string Host, string Port, string Machine, string Environment, string StartTime, string ActiveTime);
     public interface IConsoleLogService
@@ -175,7 +175,7 @@ namespace Glibs.Learning.WebApp
             Console.WriteLine($"{Counter}: {_message}");
         }
     }
-    public class TestBackgroungService : BackgroundService
+    public class TestBackgroundService : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken _ct)
         {
