@@ -91,12 +91,31 @@ namespace Glibs.Learning.WebApp
                 _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
                 return Results.Text("OK.");
             });
+            // debug/test-html [GET]
+            _app.MapGet("/api/v1/debug/test-html", (HttpContext _httpContext, ILogger<Program> _logger) => // Produced by Gemini
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-html' command.", DateTime.Now.ToString());
+                string html =   """
+                                <!DOCTYPE html>
+                                <html lang="en">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>Hyperlink Test</title>
+                                </head>
+                                <body>
+                                    <h2>Bruno Hyperlink Test</h2>
+                                    <p>Click <a href="/api/v1/help">here</a> to navigate to the <code>/api/v1/help</code> endpoint.</p>
+                                </body>
+                                </html>
+                                """;
+                return Results.Content(html, contentType: "text/html");
+            });
             // exit [POST]
             _app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commonBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
-                return Results.Accepted($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...");
+                return Results.Text($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...", statusCode: StatusCodes.Status202Accepted);
             });
             // help [GET]
             _app.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
