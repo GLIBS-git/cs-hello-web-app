@@ -6,7 +6,7 @@ namespace Glibs.Learning.WebApp
 {
     public class Program
     {
-        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }; // Reserved for furture
+        public static readonly JsonSerializerOptions jsonOptionsDecode = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }; // Reserved for future
         public static readonly JsonSerializerOptions jsonOptionsEncode = new JsonSerializerOptions()
         {
             WriteIndented = true,
@@ -31,7 +31,8 @@ namespace Glibs.Learning.WebApp
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
-            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://localhost:5050" };
+            //CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://localhost:5050" };
+            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050" };
             builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -91,11 +92,11 @@ namespace Glibs.Learning.WebApp
                 return Results.Text("OK.");
             });
             // exit [POST]
-            _app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commonBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
-                return Results.Text($"{DateTime.Now.ToString()} # Stopping web service...");
+                return Results.Accepted($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...");
             });
             // help [GET]
             _app.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
