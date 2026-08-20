@@ -69,40 +69,54 @@ namespace Glibs.Learning.WebApp
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
+            // debug/memory [GET]
+            _app.MapGet("/api/v1/debug/memory", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/memory' command.", DateTime.Now.ToString());
+                Process process = Process.GetCurrentProcess();
+                GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
+                Object memoryReport = new
+                {
+                    ProcessMemory = new
+                    {
+                        WorkingSetMb = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
+                        PrivateMemoryMb = Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2),
+                        VirtualMemoryMb = Math.Round(process.VirtualMemorySize64 / 1024.0 / 1024.0, 2)
+                    },
+                    ManagedHeap = new
+                    {
+                        TotalManagedHeapMb = Math.Round(GC.GetTotalMemory(forceFullCollection: false) / 1024.0 / 1024.0, 2),
+                        TotalAllocatedLifetimeMb = Math.Round(GC.GetTotalAllocatedBytes() / 1024.0 / 1024.0, 2),
+                        GcHeapSizeBytesMb = Math.Round(gcInfo.HeapSizeBytes / 1024.0 / 1024.0, 2),
+                        FragmentedMb = Math.Round(gcInfo.FragmentedBytes / 1024.0 / 1024.0, 2),
+                        MemoryLoadPercentage = gcInfo.MemoryLoadBytes * 100 / Math.Max(1, gcInfo.TotalAvailableMemoryBytes)
+                    },
+                    GarbageCollector = new
+                    {
+                        Gen0Collections = GC.CollectionCount(0),
+                        Gen1Collections = GC.CollectionCount(1),
+                        Gen2Collections = GC.CollectionCount(2),
+                        PauseTimePercentage = Math.Round(gcInfo.PauseTimePercentage, 2)
+                    }
+                };
+                return Results.Json(memoryReport, jsonOptionsEncode);
+            });
             // debug/threads [GET]
             _app.MapGet("/api/v1/debug/threads", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/threads' command.", DateTime.Now.ToString());
-
                 Process currentProcess = Process.GetCurrentProcess();
-
                 int totalThreadCount = currentProcess.Threads.Count;
                 int managedThreadCount = ThreadPool.ThreadCount;
-
                 double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
                 double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
-
-                // Get all OS-level threads
-                var osThreadsList = new List<object>();
-                foreach (ProcessThread thread in currentProcess.Threads)
-                {
-                    osThreadsList.Add(new
-                    {
-                        threadId = thread.Id,
-                        state = thread.ThreadState.ToString(),
-                        priorityLevel = thread.PriorityLevel.ToString(),
-                        userProcessorTime = Math.Round(thread.UserProcessorTime.TotalMilliseconds, 2)
-                    });
-                }
-
-                var response = new
+                Object response = new
                 {
                     timestamp = DateTime.UtcNow,
                     threadInfo = new
                     {
                         totalThreadCount = totalThreadCount,
                         managedThreadCount = managedThreadCount,
-                        threads = osThreadsList
                     },
                     memoryInfo = new
                     {
