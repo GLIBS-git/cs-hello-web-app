@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Caching.Memory;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace Glibs.Learning.WebApp
 {
@@ -66,6 +68,50 @@ namespace Glibs.Learning.WebApp
                 foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
+            });
+            // debug/threads [GET]
+            _app.MapGet("/api/v1/debug/threads", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/threads' command.", DateTime.Now.ToString());
+
+                Process currentProcess = Process.GetCurrentProcess();
+
+                int totalThreadCount = currentProcess.Threads.Count;
+                int managedThreadCount = ThreadPool.ThreadCount;
+
+                double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
+                double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+
+                // Get all OS-level threads
+                var osThreadsList = new List<object>();
+                foreach (ProcessThread thread in currentProcess.Threads)
+                {
+                    osThreadsList.Add(new
+                    {
+                        threadId = thread.Id,
+                        state = thread.ThreadState.ToString(),
+                        priorityLevel = thread.PriorityLevel.ToString(),
+                        userProcessorTime = Math.Round(thread.UserProcessorTime.TotalMilliseconds, 2)
+                    });
+                }
+
+                var response = new
+                {
+                    timestamp = DateTime.UtcNow,
+                    threadInfo = new
+                    {
+                        totalThreadCount = totalThreadCount,
+                        managedThreadCount = managedThreadCount,
+                        threads = osThreadsList
+                    },
+                    memoryInfo = new
+                    {
+                        workingSetMb = Math.Round(workingSetMb, 2),
+                        managedHeapMb = Math.Round(managedHeapMb, 2)
+                    }
+                };
+
+                return Results.Json(response, Program.jsonOptionsEncode);
             });
             // debug/test [GET]
             _app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
@@ -232,6 +278,7 @@ namespace Glibs.Learning.WebApp
                                 DEBUG/TEST (get) -- command for testing something.
                                 DEBUG/TEST1 (get) -- another command for testing something.
                                 DEBUG/TEST2 (get) -- one more command for testing something.
+                                DEBUG/THREADS (get) -- shows active thread count and memory usage.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
                                 PING (get) -- test connection.
