@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
+using Prometheus;
 
 namespace Glibs.Learning.WebApp
 {
@@ -21,7 +21,6 @@ namespace Glibs.Learning.WebApp
             WebApplicationBuilder builder = Program.BuildApplication(args);
             WebApplication app = builder.Build();
             Program.SetupWebApp(app);
-            Program.AddMappings(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
             Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {commonBuffer?.Host}...");
             app?.Run();
@@ -29,6 +28,9 @@ namespace Glibs.Learning.WebApp
         static void SetupWebApp(WebApplication _app)
         {
             _app.UseResponseCompression();
+            _app.UseHttpMetrics();
+            _app.MapMetrics();
+            Program.AddMappings(_app);
         }
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
