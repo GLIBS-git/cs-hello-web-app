@@ -31,6 +31,11 @@ namespace Glibs.Learning.WebApp
             _app.UseHttpMetrics();
             _app.MapMetrics();
             Program.AddMappings(_app);
+            _app.Use(async (context, next) => {
+                ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("{DateTime} # Received '{Command}' command.", DateTime.Now.ToString(), context.Request.Path);
+                await next(context);
+            });
         }
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
@@ -54,16 +59,19 @@ namespace Glibs.Learning.WebApp
         }
         public static void AddMappings(WebApplication _app)
         {
+            RouteGroupBuilder apiGroup = _app.MapGroup("/api/v1");
             // / [GET]
-            _app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            //_app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
                 //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
                 //return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
                 return Results.Text(ResponseHelper.GetHelp(""));
             });
+            RouteGroupBuilder debugGroup = apiGroup.MapGroup("/debug");
             // debug/appl-services [GET]
-            _app.MapGet("/api/v1/debug/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
@@ -72,7 +80,7 @@ namespace Glibs.Learning.WebApp
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/memory [GET]
-            _app.MapGet("/api/v1/debug/memory", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/memory", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/memory' command.", DateTime.Now.ToString());
                 Process process = Process.GetCurrentProcess();
@@ -103,8 +111,51 @@ namespace Glibs.Learning.WebApp
                 };
                 return Results.Json(memoryReport, jsonOptionsEncode);
             });
+            // debug/test [GET]
+            debugGroup.MapGet("/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
+                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
+                //return Results.Redirect("/api/v1/sys-info", permanent: true);
+                return Results.Redirect("/api/v1/sys-info", permanent: false);
+            });
+            // debug/test-1 [GET]
+            debugGroup.MapGet("/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
+                _cache.Set("001", "001");
+                _cache.Set("002", 2);
+                _cache.TryGetValue("001", out string? _value);
+                Console.WriteLine(_value);
+                return Results.Text("OK.");
+            });
+            // debug/test-2 [GET]
+            debugGroup.MapGet("/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
+                return Results.Text("OK.");
+            });
             // debug/threads [GET]
-            _app.MapGet("/api/v1/debug/threads", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            // debug/test-html [GET]
+            debugGroup.MapGet("/test-html", (HttpContext _httpContext, ILogger<Program> _logger) => // Produced by Gemini
+            {
+                _logger.LogInformation("{DateTime} # Received 'debug/test-html' command.", DateTime.Now.ToString());
+                string html = """
+                                <!DOCTYPE html>
+                                <html lang="en">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>Hyperlink Test</title>
+                                </head>
+                                <body>
+                                    <h2>Bruno Hyperlink Test</h2>
+                                    <p>Click <a href="/api/v1/help">here</a> to navigate to the <code>/api/v1/help</code> endpoint.</p>
+                                </body>
+                                </html>
+                                """;
+                return Results.Content(html, contentType: "text/html");
+            });
+            debugGroup.MapGet("/threads", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'debug/threads' command.", DateTime.Now.ToString());
                 Process currentProcess = Process.GetCurrentProcess();
@@ -129,70 +180,27 @@ namespace Glibs.Learning.WebApp
 
                 return Results.Json(response, Program.jsonOptionsEncode);
             });
-            // debug/test [GET]
-            _app.MapGet("/api/v1/debug/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
-            {
-                _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
-                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
-                //return Results.Redirect("/api/v1/sys-info", permanent: true);
-                return Results.Redirect("/api/v1/sys-info", permanent: false);
-            });
-            // debug/test-1 [GET]
-            _app.MapGet("/api/v1/debug/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
-            {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
-                _cache.Set("001", "001");
-                _cache.Set("002", 2);
-                _cache.TryGetValue("001", out string? _value);
-                Console.WriteLine(_value);
-                return Results.Text("OK.");
-            });
-            // debug/test-2 [GET]
-            _app.MapGet("/api/v1/debug/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
-            {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
-                return Results.Text("OK.");
-            });
-            // debug/test-html [GET]
-            _app.MapGet("/api/v1/debug/test-html", (HttpContext _httpContext, ILogger<Program> _logger) => // Produced by Gemini
-            {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-html' command.", DateTime.Now.ToString());
-                string html =   """
-                                <!DOCTYPE html>
-                                <html lang="en">
-                                <head>
-                                    <meta charset="UTF-8">
-                                    <title>Hyperlink Test</title>
-                                </head>
-                                <body>
-                                    <h2>Bruno Hyperlink Test</h2>
-                                    <p>Click <a href="/api/v1/help">here</a> to navigate to the <code>/api/v1/help</code> endpoint.</p>
-                                </body>
-                                </html>
-                                """;
-                return Results.Content(html, contentType: "text/html");
-            });
             // exit [POST]
-            _app.MapPost("/api/v1/exit", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commonBuffer) =>
+            apiGroup.MapPost("/exit", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commonBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
                 return Results.Text($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...", statusCode: StatusCodes.Status202Accepted);
             });
             // help [GET]
-            _app.MapGet("/api/v1/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'help' command.", DateTime.Now.ToString());
                 return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
             });
             // help/<command> [GET]
-            _app.MapGet("/api/v1/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'help/{_helpCommand}' command.", DateTime.Now.ToString(), _helpCommand);
                 return Results.Text(ResponseHelper.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            _app.MapGet("/api/v1/ping", async (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer, string? output, string? delay) =>
+            apiGroup.MapGet("/ping", async (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer, string? output, string? delay) =>
             {
                 _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(),
                     _httpContext.Request.Path, output, delay);
@@ -209,15 +217,15 @@ namespace Glibs.Learning.WebApp
             }
             );
             // ping-old [GET]
-            _app.MapGet("/api/v1/ping-old", WebRequestProcessor.ProcessGetPing);
+            apiGroup.MapGet("/ping-old", WebRequestProcessor.ProcessGetPing);
             // pwd [GET]
-            _app.MapGet("/api/v1/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'pwd' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
             // sys-info [GET]
-            _app.MapGet("/api/v1/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
+            apiGroup.MapGet("/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
             {
                 _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
@@ -291,10 +299,12 @@ namespace Glibs.Learning.WebApp
 
                                 Use commands:
                                 DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
+                                DEBUG/MEMORY (get) -- shows memory usage.
                                 DEBUG/TEST (get) -- command for testing something.
-                                DEBUG/TEST1 (get) -- another command for testing something.
-                                DEBUG/TEST2 (get) -- one more command for testing something.
-                                DEBUG/THREADS (get) -- shows active thread count and memory usage.
+                                DEBUG/TEST-1 (get) -- another command for testing something.
+                                DEBUG/TEST-2 (get) -- one more command for testing something.
+                                DEBUG/TEST-HTML (get) -- returns tes page in HTML format to check Postman/Bruno follows links in HTML results.
+                                DEBUG/THREADS (get) -- shows active thread count.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
                                 PING (get) -- test connection.
