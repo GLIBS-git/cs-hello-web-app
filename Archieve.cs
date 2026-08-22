@@ -32,6 +32,14 @@ namespace Glibs.Learning.WebApp
         //        await next.Invoke();
         //        Console.WriteLine("A-la one more logging after...");
         //});
+        // / [GET]
+        //_app.MapGet("", (HttpContext _httpContext, ILogger<Program> _logger) =>
+        //    {
+        //        _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
+        //        app.Services.GetService<IConsoleLogService>().Log("Test logging!");
+        //        return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
+        //        return Results.Text(ResponseHelper.GetHelp(""));
+        //    });
 
 
 

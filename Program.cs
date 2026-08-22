@@ -33,7 +33,7 @@ namespace Glibs.Learning.WebApp
             Program.AddMappings(_app);
             _app.Use(async (context, next) => {
                 ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("{DateTime} # Received '{Command}' command.", DateTime.Now.ToString(), context.Request.Path);
+                logger.LogInformation("{DateTime} # Received '{Command}' command with options '{Query}'.", DateTime.Now.ToString(), context.Request.Path, context.Request.QueryString);
                 await next(context);
             });
         }
@@ -61,28 +61,22 @@ namespace Glibs.Learning.WebApp
         {
             RouteGroupBuilder apiGroup = _app.MapGroup("/api/v1");
             // / [GET]
-            //_app.MapGet("/api/v1", (HttpContext _httpContext, ILogger<Program> _logger) =>
-            _app.MapGet("", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            _app.MapGet("", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received root command.", DateTime.Now.ToString());
-                //app.Services.GetService<IConsoleLogService>().Log("Test logging!");
-                //return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
                 return Results.Text(ResponseHelper.GetHelp(""));
             });
             RouteGroupBuilder debugGroup = apiGroup.MapGroup("/debug");
             // debug/appl-services [GET]
-            debugGroup.MapGet("/appl-services", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/appl-services", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/appl-services' command.", DateTime.Now.ToString());
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
                 foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
                     applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
                 return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
             });
             // debug/memory [GET]
-            debugGroup.MapGet("/memory", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/memory", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/memory' command.", DateTime.Now.ToString());
                 Process process = Process.GetCurrentProcess();
                 GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
                 Object memoryReport = new
@@ -112,9 +106,8 @@ namespace Glibs.Learning.WebApp
                 return Results.Json(memoryReport, jsonOptionsEncode);
             });
             // debug/test [GET]
-            debugGroup.MapGet("/test", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/test", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/test' command.", DateTime.Now.ToString());
                 //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
                 //return Results.Redirect("/api/v1/sys-info", permanent: true);
                 return Results.Redirect("/api/v1/sys-info", permanent: false);
