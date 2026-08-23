@@ -168,7 +168,7 @@ namespace Glibs.Learning.WebApp
                     result = Results.Text(_text, "text/plain; charset=utf-8", Encoding.UTF8, _statusCode);
                     break;
                 case ContentType.Json:
-                    result = Results.Json(new ResponceJson { Response = _text }, Program.jsonOptionsEncode, "application/json; charset=utf-8", _statusCode);
+                    result = Results.Json(new ResponseJson(_text), Program.jsonOptionsEncode, "application/json; charset=utf-8", _statusCode);
                     break;
             }
             return result;
@@ -178,9 +178,5 @@ namespace Glibs.Learning.WebApp
     {
         Text = 0,
         Json = 1
-    }
-    public struct ResponceJson
-    {
-        public string Response { get; set; }
     }
 }

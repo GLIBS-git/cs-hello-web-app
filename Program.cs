@@ -24,6 +24,9 @@ namespace Glibs.Learning.WebApp
             Program.SetupWebApp(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
             Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {commonBuffer?.Host}...");
+            //string? hostAddress = "";
+            //app?.Services.GetRequiredService<IMemoryCache>().TryGetValue("HostAddress", out hostAddress);
+            //Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
             app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
@@ -41,7 +44,8 @@ namespace Glibs.Learning.WebApp
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
-            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050" }; // Or: http://localhost:5050  
+            string host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050"; // Or: http://localhost:5050
+            CommonBuffer commonBuffer = new CommonBuffer() { Host = host };
             builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -50,6 +54,7 @@ namespace Glibs.Learning.WebApp
             });
             builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
             builder.Services.AddMemoryCache();
+            builder.Services.BuildServiceProvider().GetRequiredService<IMemoryCache>().Set("HostAddress", host);
             serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
@@ -123,16 +128,16 @@ namespace Glibs.Learning.WebApp
                 return Results.Text(ResponseHelper.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            apiGroup.MapGet("/ping", async (HttpContext _httpContext, ICommonBuffer _commandBuffer, string? output, string? delay) =>
+            apiGroup.MapGet("/ping", async (HttpContext _httpContext, ICommonBuffer _commonBuffer, string? output, string? delay) =>
             {
-                string pingReply = ResponseHelper.PingReply(_commandBuffer.Host);
+                string pingReply = ResponseHelper.PingReply(_commonBuffer.Host ?? "");
                 if (int.TryParse(delay ?? "", out int delaySec))
                 {
                     if (delaySec > 0)
                         await Task.Delay(delaySec * 1000);
                 }
                 if ((output ?? "").ToLower().Equals("json"))
-                    return Results.Json(new ResponceJson { Response = pingReply }, Program.jsonOptionsEncode);
+                    return Results.Json(new ResponseJson(pingReply), Program.jsonOptionsEncode);
                 else
                     return Results.Text($"{pingReply}");
             }
@@ -145,7 +150,7 @@ namespace Glibs.Learning.WebApp
             // sys-info [GET]
             apiGroup.MapGet("/sys-info", (HttpContext _httpContext, ICommonBuffer _commandBuffer) =>
             {
-                SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
+                SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString() ?? "", 
                     _httpContext.Connection.LocalPort.ToString(),
                     _commandBuffer.MachineName,
                     _app.Environment.EnvironmentName,
@@ -245,34 +250,33 @@ namespace Glibs.Learning.WebApp
                     Use '/HELP' command for commands help.
                     """;
         }
+        public record ProcessMemoryData(double WorkingSetMb, double PrivateMemoryMb, double VirtualMemoryMb);
+        public record ManagedHeapData(double TotalManagedHeapMb, double TotalAllocatedLifetimeMb, double GcHeapSizeBytesMb, double FragmentedMb, long MemoryLoadPercentage);
+        public record GarbageCollectorData(int Gen0Collections, int Gen1Collections, int Gen2Collections, double PauseTimePercentage);
+        public record MemoryReportData(ProcessMemoryData ProcessMemory, ManagedHeapData ManagedHeap, GarbageCollectorData GarbageCollector);
         public static IResult? ProcessMemoryReport(HttpContext _httpContext)
         {
             Process process = Process.GetCurrentProcess();
             GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
-            Object memoryReport = new
-            {
-                ProcessMemory = new
-                {
-                    WorkingSetMb = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
-                    PrivateMemoryMb = Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2),
-                    VirtualMemoryMb = Math.Round(process.VirtualMemorySize64 / 1024.0 / 1024.0, 2)
-                },
-                ManagedHeap = new
-                {
-                    TotalManagedHeapMb = Math.Round(GC.GetTotalMemory(forceFullCollection: false) / 1024.0 / 1024.0, 2),
-                    TotalAllocatedLifetimeMb = Math.Round(GC.GetTotalAllocatedBytes() / 1024.0 / 1024.0, 2),
-                    GcHeapSizeBytesMb = Math.Round(gcInfo.HeapSizeBytes / 1024.0 / 1024.0, 2),
-                    FragmentedMb = Math.Round(gcInfo.FragmentedBytes / 1024.0 / 1024.0, 2),
-                    MemoryLoadPercentage = gcInfo.MemoryLoadBytes * 100 / Math.Max(1, gcInfo.TotalAvailableMemoryBytes)
-                },
-                GarbageCollector = new
-                {
-                    Gen0Collections = GC.CollectionCount(0),
-                    Gen1Collections = GC.CollectionCount(1),
-                    Gen2Collections = GC.CollectionCount(2),
-                    PauseTimePercentage = Math.Round(gcInfo.PauseTimePercentage, 2)
-                }
-            };
+            ProcessMemoryData processMemory = new(
+                WorkingSetMb: Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
+                PrivateMemoryMb: Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2),
+                VirtualMemoryMb: Math.Round(process.VirtualMemorySize64 / 1024.0 / 1024.0, 2)
+            );
+            ManagedHeapData managedHeap = new(
+                TotalManagedHeapMb: Math.Round(GC.GetTotalMemory(forceFullCollection: false) / 1024.0 / 1024.0, 2),
+                TotalAllocatedLifetimeMb: Math.Round(GC.GetTotalAllocatedBytes() / 1024.0 / 1024.0, 2),
+                GcHeapSizeBytesMb: Math.Round(gcInfo.HeapSizeBytes / 1024.0 / 1024.0, 2),
+                FragmentedMb: Math.Round(gcInfo.FragmentedBytes / 1024.0 / 1024.0, 2),
+                MemoryLoadPercentage: gcInfo.MemoryLoadBytes * 100 / Math.Max(1, gcInfo.TotalAvailableMemoryBytes)
+            );
+            GarbageCollectorData garbageCollector = new(
+                Gen0Collections: GC.CollectionCount(0),
+                Gen1Collections: GC.CollectionCount(1),
+                Gen2Collections: GC.CollectionCount(2),
+                PauseTimePercentage: Math.Round(gcInfo.PauseTimePercentage, 2)
+            );
+            MemoryReportData memoryReport = new(processMemory, managedHeap, garbageCollector);
             return Results.Json(memoryReport, Program.jsonOptionsEncode);
         }
         public static string TestHtmlPage()
@@ -291,30 +295,22 @@ namespace Glibs.Learning.WebApp
                     </html>
                     """;
         }
-        public static Object ThreadReport(string _host)
+        public record ThreadData(int TotalThreadCount, int ManagedThreadCount);
+        public record MemoryData(double WorkingSetMb, double ManagedHeapMb);
+        public record ThreadMemoryData(DateTime Timestamp, ThreadData ThreadInfo, MemoryData MemoryInfo);
+        public static ThreadMemoryData ThreadReport(string _host)
         {
             Process currentProcess = Process.GetCurrentProcess();
             int totalThreadCount = currentProcess.Threads.Count;
             int managedThreadCount = ThreadPool.ThreadCount;
             double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
             double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
-            Object response = new
-            {
-                timestamp = DateTime.UtcNow,
-                threadInfo = new
-                {
-                    totalThreadCount = totalThreadCount,
-                    managedThreadCount = managedThreadCount,
-                },
-                memoryInfo = new
-                {
-                    workingSetMb = Math.Round(workingSetMb, 2),
-                    managedHeapMb = Math.Round(managedHeapMb, 2)
-                }
-            };
-            return response;
+            ThreadData threadInfo = new ThreadData(totalThreadCount, managedThreadCount);
+            MemoryData memoryInfo = new MemoryData(workingSetMb, managedHeapMb);
+            return new ThreadMemoryData(DateTime.UtcNow, threadInfo, memoryInfo);
         }
     }
+    public record ResponseJson(string Response);
     public record ApplicationService(string? Name, string LifeTime);
     public record ApplicationServices(IEnumerable<ApplicationService>? ApplicationService);
 }
