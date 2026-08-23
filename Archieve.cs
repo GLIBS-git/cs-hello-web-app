@@ -51,6 +51,8 @@ namespace Glibs.Learning.WebApp
         public WebRequestProcessor(WebApplication _webApp)
         {
             this.WebApp = _webApp;
+            // ping-old [GET]
+            _webApp.MapGet("/ping-old", WebRequestProcessor.ProcessGetPing);
         }
         public IResult ProcessGetTest(HttpContext _httpContext)
         {

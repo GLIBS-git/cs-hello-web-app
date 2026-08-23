@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Prometheus;
+using System.Text.Json.Nodes;
 
 namespace Glibs.Learning.WebApp
 {
@@ -15,7 +16,7 @@ namespace Glibs.Learning.WebApp
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
-        static IServiceCollection? serviceCollection = null;
+        static IServiceCollection? serviceCollection = null; // For diagnostics
         public static void Main(string[] args)
         {
             WebApplicationBuilder builder = Program.BuildApplication(args);
@@ -40,8 +41,7 @@ namespace Glibs.Learning.WebApp
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
-            //CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://localhost:5050" };
-            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050" };
+            CommonBuffer commonBuffer = new CommonBuffer() { Host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050" }; // Or: http://localhost:5050  
             builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -50,7 +50,6 @@ namespace Glibs.Learning.WebApp
             });
             builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
             builder.Services.AddMemoryCache();
-            //builder.Services.AddScoped<ILogger>();
             serviceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
@@ -71,40 +70,11 @@ namespace Glibs.Learning.WebApp
             {
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
                 foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
-                    applicationServicesList.Add(new ApplicationService() { Name = serviceDescriptor.ServiceType.Name, LifeTime = $"{serviceDescriptor.Lifetime}" });
-                return Results.Json<ApplicationServices>(new ApplicationServices() { ApplicationService = applicationServicesList }, Program.jsonOptionsEncode);
+                    applicationServicesList.Add(new ApplicationService(Name: serviceDescriptor.ServiceType.Name, LifeTime: $"{serviceDescriptor.Lifetime}") );
+                return Results.Json<ApplicationServices>(new ApplicationServices( ApplicationService: applicationServicesList), Program.jsonOptionsEncode);
             });
             // debug/memory [GET]
-            debugGroup.MapGet("/memory", (HttpContext _httpContext) =>
-            {
-                Process process = Process.GetCurrentProcess();
-                GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
-                Object memoryReport = new
-                {
-                    ProcessMemory = new
-                    {
-                        WorkingSetMb = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
-                        PrivateMemoryMb = Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2),
-                        VirtualMemoryMb = Math.Round(process.VirtualMemorySize64 / 1024.0 / 1024.0, 2)
-                    },
-                    ManagedHeap = new
-                    {
-                        TotalManagedHeapMb = Math.Round(GC.GetTotalMemory(forceFullCollection: false) / 1024.0 / 1024.0, 2),
-                        TotalAllocatedLifetimeMb = Math.Round(GC.GetTotalAllocatedBytes() / 1024.0 / 1024.0, 2),
-                        GcHeapSizeBytesMb = Math.Round(gcInfo.HeapSizeBytes / 1024.0 / 1024.0, 2),
-                        FragmentedMb = Math.Round(gcInfo.FragmentedBytes / 1024.0 / 1024.0, 2),
-                        MemoryLoadPercentage = gcInfo.MemoryLoadBytes * 100 / Math.Max(1, gcInfo.TotalAvailableMemoryBytes)
-                    },
-                    GarbageCollector = new
-                    {
-                        Gen0Collections = GC.CollectionCount(0),
-                        Gen1Collections = GC.CollectionCount(1),
-                        Gen2Collections = GC.CollectionCount(2),
-                        PauseTimePercentage = Math.Round(gcInfo.PauseTimePercentage, 2)
-                    }
-                };
-                return Results.Json(memoryReport, jsonOptionsEncode);
-            });
+            debugGroup.MapGet("/memory", ResponseHelper.ProcessMemoryReport); // Just onece. A demo of using delegates.
             // debug/test [GET]
             debugGroup.MapGet("/test", (HttpContext _httpContext) =>
             {
@@ -113,9 +83,8 @@ namespace Glibs.Learning.WebApp
                 return Results.Redirect("/api/v1/sys-info", permanent: false);
             });
             // debug/test-1 [GET]
-            debugGroup.MapGet("/test-1", (HttpContext _httpContext, ILogger<Program> _logger, IMemoryCache _cache) => 
+            debugGroup.MapGet("/test-1", (HttpContext _httpContext, IMemoryCache _cache) => 
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-1' command.", DateTime.Now.ToString());
                 _cache.Set("001", "001");
                 _cache.Set("002", 2);
                 _cache.TryGetValue("001", out string? _value);
@@ -123,80 +92,39 @@ namespace Glibs.Learning.WebApp
                 return Results.Text("OK.");
             });
             // debug/test-2 [GET]
-            debugGroup.MapGet("/test-2", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/test-2", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-2' command.", DateTime.Now.ToString());
                 return Results.Text("OK.");
             });
             // debug/threads [GET]
             // debug/test-html [GET]
-            debugGroup.MapGet("/test-html", (HttpContext _httpContext, ILogger<Program> _logger) => // Produced by Gemini
+            debugGroup.MapGet("/test-html", (HttpContext _httpContext) => // Produced by Gemini
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/test-html' command.", DateTime.Now.ToString());
-                string html = """
-                                <!DOCTYPE html>
-                                <html lang="en">
-                                <head>
-                                    <meta charset="UTF-8">
-                                    <title>Hyperlink Test</title>
-                                </head>
-                                <body>
-                                    <h2>Bruno Hyperlink Test</h2>
-                                    <p>Click <a href="/api/v1/help">here</a> to navigate to the <code>/api/v1/help</code> endpoint.</p>
-                                </body>
-                                </html>
-                                """;
-                return Results.Content(html, contentType: "text/html");
+                return Results.Content(ResponseHelper.TestHtmlPage(), contentType: "text/html");
             });
-            debugGroup.MapGet("/threads", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            debugGroup.MapGet("/threads", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'debug/threads' command.", DateTime.Now.ToString());
-                Process currentProcess = Process.GetCurrentProcess();
-                int totalThreadCount = currentProcess.Threads.Count;
-                int managedThreadCount = ThreadPool.ThreadCount;
-                double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
-                double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
-                Object response = new
-                {
-                    timestamp = DateTime.UtcNow,
-                    threadInfo = new
-                    {
-                        totalThreadCount = totalThreadCount,
-                        managedThreadCount = managedThreadCount,
-                    },
-                    memoryInfo = new
-                    {
-                        workingSetMb = Math.Round(workingSetMb, 2),
-                        managedHeapMb = Math.Round(managedHeapMb, 2)
-                    }
-                };
-
-                return Results.Json(response, Program.jsonOptionsEncode);
+                return Results.Json(ResponseHelper.ThreadReport, Program.jsonOptionsEncode);
             });
             // exit [POST]
-            apiGroup.MapPost("/exit", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commonBuffer) =>
+            apiGroup.MapPost("/exit", (HttpContext _httpContext, ICommonBuffer _commonBuffer) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'exit' command.", DateTime.Now.ToString());
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
                 return Results.Text($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...", statusCode: StatusCodes.Status202Accepted);
             });
             // help [GET]
-            apiGroup.MapGet("/help", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/help", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'help' command.", DateTime.Now.ToString());
                 return Results.Text(ResponseHelper.GetHelp(""), contentType: "text/plain");
             });
             // help/<command> [GET]
-            apiGroup.MapGet("/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/help/{_helpCommand}", (string _helpCommand, HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'help/{_helpCommand}' command.", DateTime.Now.ToString(), _helpCommand);
                 return Results.Text(ResponseHelper.GetHelp(_helpCommand), contentType: "text/plain");
             });
             // ping [GET]
-            apiGroup.MapGet("/ping", async (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer, string? output, string? delay) =>
+            apiGroup.MapGet("/ping", async (HttpContext _httpContext, ICommonBuffer _commandBuffer, string? output, string? delay) =>
             {
-                _logger.LogInformation("{DateTime} # Received '{path}' request with analyzed options: 'output={output}, 'delay={delay}'.", DateTime.Now.ToString(),
-                    _httpContext.Request.Path, output, delay);
                 string pingReply = ResponseHelper.PingReply(_commandBuffer.Host);
                 if (int.TryParse(delay ?? "", out int delaySec))
                 {
@@ -209,23 +137,19 @@ namespace Glibs.Learning.WebApp
                     return Results.Text($"{pingReply}");
             }
             );
-            // ping-old [GET]
-            apiGroup.MapGet("/ping-old", WebRequestProcessor.ProcessGetPing);
             // pwd [GET]
-            apiGroup.MapGet("/pwd", (HttpContext _httpContext, ILogger<Program> _logger) =>
+            apiGroup.MapGet("/pwd", (HttpContext _httpContext) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'pwd' command.", DateTime.Now.ToString());
                 return Results.Text($"Current directory: {Directory.GetCurrentDirectory()}");
             });
             // sys-info [GET]
-            apiGroup.MapGet("/sys-info", (HttpContext _httpContext, ILogger<Program> _logger, ICommonBuffer _commandBuffer) =>
+            apiGroup.MapGet("/sys-info", (HttpContext _httpContext, ICommonBuffer _commandBuffer) =>
             {
-                _logger.LogInformation("{DateTime} # Received 'sys-info' command.", DateTime.Now.ToString());
                 SysInfo sysInfo = new SysInfo(_httpContext.Connection.LocalIpAddress?.ToString(), 
                     _httpContext.Connection.LocalPort.ToString(),
                     _commandBuffer.MachineName,
                     _app.Environment.EnvironmentName,
-                    _commandBuffer.ServiceStartTime.ToString(),
+                    _commandBuffer.ServiceStartTime,
                     (DateTime.Now - _commandBuffer.ServiceStartTime).ToString()
                 );
                 return Results.Ok(sysInfo);
@@ -244,7 +168,7 @@ namespace Glibs.Learning.WebApp
         public string MachineName { get; } = Environment.MachineName ;
         public string? Host { get; init; } 
     }
-    public record SysInfo(string Host, string Port, string Machine, string Environment, string StartTime, string ActiveTime);
+    public record SysInfo(string Host, string Port, string Machine, string Environment, DateTime StartTime, string ActiveTime);
     public interface IConsoleLogService
     {
         void Log(string _message);
@@ -273,13 +197,6 @@ namespace Glibs.Learning.WebApp
     }
     public static class ResponseHelper
     {
-        public static string PingReply(string _host)
-        {
-            return $"""
-                    {_host} is alive!
-                    Use '/HELP' command for commands help.
-                    """;
-        }
         public static string GetHelp(string _command)
         {
             _command ??= "";
@@ -292,18 +209,16 @@ namespace Glibs.Learning.WebApp
 
                                 Use commands:
                                 DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
-                                DEBUG/MEMORY (get) -- shows memory usage.
+                                DEBUG/MEMORY (get) -- shows memory usage report.
                                 DEBUG/TEST (get) -- command for testing something.
                                 DEBUG/TEST-1 (get) -- another command for testing something.
                                 DEBUG/TEST-2 (get) -- one more command for testing something.
                                 DEBUG/TEST-HTML (get) -- returns tes page in HTML format to check Postman/Bruno follows links in HTML results.
-                                DEBUG/THREADS (get) -- shows active thread count.
+                                DEBUG/THREADS (get) -- shows active thread count info.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
                                 PING (get) -- test connection.
                                         More details on: help/ping.
-                                PING-OLD (get) -- test connection, old version (delegate method instead of lambda).
-                                        More details on: help/ping-old.
                                 PWD (get) -- shows current directory of web service.
                                 SYS-INFO (get) -- shows service state (start time and so on).
                                 """;
@@ -323,14 +238,83 @@ namespace Glibs.Learning.WebApp
             }
             return helpText;
         }
+        public static string PingReply(string _host)
+        {
+            return $"""
+                    {_host} is alive!
+                    Use '/HELP' command for commands help.
+                    """;
+        }
+        public static IResult? ProcessMemoryReport(HttpContext _httpContext)
+        {
+            Process process = Process.GetCurrentProcess();
+            GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
+            Object memoryReport = new
+            {
+                ProcessMemory = new
+                {
+                    WorkingSetMb = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
+                    PrivateMemoryMb = Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2),
+                    VirtualMemoryMb = Math.Round(process.VirtualMemorySize64 / 1024.0 / 1024.0, 2)
+                },
+                ManagedHeap = new
+                {
+                    TotalManagedHeapMb = Math.Round(GC.GetTotalMemory(forceFullCollection: false) / 1024.0 / 1024.0, 2),
+                    TotalAllocatedLifetimeMb = Math.Round(GC.GetTotalAllocatedBytes() / 1024.0 / 1024.0, 2),
+                    GcHeapSizeBytesMb = Math.Round(gcInfo.HeapSizeBytes / 1024.0 / 1024.0, 2),
+                    FragmentedMb = Math.Round(gcInfo.FragmentedBytes / 1024.0 / 1024.0, 2),
+                    MemoryLoadPercentage = gcInfo.MemoryLoadBytes * 100 / Math.Max(1, gcInfo.TotalAvailableMemoryBytes)
+                },
+                GarbageCollector = new
+                {
+                    Gen0Collections = GC.CollectionCount(0),
+                    Gen1Collections = GC.CollectionCount(1),
+                    Gen2Collections = GC.CollectionCount(2),
+                    PauseTimePercentage = Math.Round(gcInfo.PauseTimePercentage, 2)
+                }
+            };
+            return Results.Json(memoryReport, Program.jsonOptionsEncode);
+        }
+        public static string TestHtmlPage()
+        {
+            return """
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Hyperlink Test</title>
+                    </head>
+                    <body>
+                        <h2>Bruno Hyperlink Test</h2>
+                        <p>Click <a href="/api/v1/help">here</a> to navigate to the <code>/api/v1/help</code> endpoint.</p>
+                    </body>
+                    </html>
+                    """;
+        }
+        public static Object ThreadReport(string _host)
+        {
+            Process currentProcess = Process.GetCurrentProcess();
+            int totalThreadCount = currentProcess.Threads.Count;
+            int managedThreadCount = ThreadPool.ThreadCount;
+            double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
+            double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+            Object response = new
+            {
+                timestamp = DateTime.UtcNow,
+                threadInfo = new
+                {
+                    totalThreadCount = totalThreadCount,
+                    managedThreadCount = managedThreadCount,
+                },
+                memoryInfo = new
+                {
+                    workingSetMb = Math.Round(workingSetMb, 2),
+                    managedHeapMb = Math.Round(managedHeapMb, 2)
+                }
+            };
+            return response;
+        }
     }
-    public struct ApplicationService
-    {
-        public string Name { get; set; }
-        public string LifeTime { get; set; }
-    }
-    public struct ApplicationServices
-    {
-        public IEnumerable<ApplicationService> ApplicationService { get; set; }
-    }
+    public record ApplicationService(string? Name, string LifeTime);
+    public record ApplicationServices(IEnumerable<ApplicationService>? ApplicationService);
 }
