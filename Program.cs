@@ -33,7 +33,7 @@ namespace Glibs.Learning.WebApp
             Program.AddMappings(_app);
             _app.Use(async (context, next) => {
                 ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("{DateTime} # Received '{Command}' command with options '{Query}'.", DateTime.Now.ToString(), context.Request.Path, context.Request.QueryString);
+                logger.LogInformation("Request received. Path: '{Path}'; Query: '{Query}'.", context.Request.Path, context.Request.QueryString);
                 await next(context);
             });
         }
@@ -42,11 +42,16 @@ namespace Glibs.Learning.WebApp
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             string host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050"; // Or: http://localhost:5050
             CommonBuffer commonBuffer = new CommonBuffer() { Host = host };
-            builder.Services.ConfigureHttpJsonOptions(options => // For: Results.Ok();
+            builder.Services.ConfigureHttpJsonOptions(options => // Format for Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.SerializerOptions.WriteIndented = true;
                 options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+            });
+            builder.Logging.AddSimpleConsole(options => 
+            {
+                options.TimestampFormat = "HH:mm:ss dd.MM.yyyy :: ";
+                //options.IncludeScopes = true; // Reserved for future & debugging 
             });
             builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
             builder.Services.AddMemoryCache();
@@ -80,17 +85,16 @@ namespace Glibs.Learning.WebApp
             });
             // debug/memory [GET]
             debugGroup.MapGet("/memory", ResponseHelper.ProcessMemoryReport); // Just onece. A demo of using delegates.
-            // debug/test [GET]
+            // debug/test-redirect [GET]
             debugGroup.MapGet("/test", (HttpContext _httpContext) =>
             {
-                //return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
-                //return Results.Redirect("/api/v1/sys-info", permanent: true);
-                return Results.Redirect("/api/v1/sys-info", permanent: false);
+                // Reserver for tests and debugging
+                return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
             });
             // debug/test-1 [GET]
             debugGroup.MapGet("/test-1", (HttpContext _httpContext, IMemoryCache _cache) => 
             {
-                _cache.Set("001", "001");
+                _cache.Set("001", "001"); // Reserved for tests
                 _cache.Set("002", 2);
                 _cache.TryGetValue("001", out string? _value);
                 Console.WriteLine(_value);
@@ -99,12 +103,18 @@ namespace Glibs.Learning.WebApp
             // debug/test-2 [GET]
             debugGroup.MapGet("/test-2", (HttpContext _httpContext) =>
             {
-                return Results.Text("OK.");
+                return Results.Text("OK."); // Reserved for tests
             });
             // debug/test-html [GET]
             debugGroup.MapGet("/test-html", (HttpContext _httpContext) => // Produced by Gemini
             {
                 return Results.Content(ResponseHelper.TestHtmlPage(), contentType: "text/html");
+            });
+            // debug/test-redirect [GET]
+            debugGroup.MapGet("/test-redirect", (HttpContext _httpContext) =>
+            {
+                //return Results.Redirect("/api/v1/sys-info", permanent: true); // Another option
+                return Results.Redirect("/api/v1/sys-info", permanent: false);
             });
             // debug/threads [GET]
             debugGroup.MapGet("/threads", (HttpContext _httpContext) =>
@@ -217,10 +227,11 @@ namespace Glibs.Learning.WebApp
                                 Use commands:
                                 DEBUG/APPL-SERVICES (get) -- list of active (automatically added) web application services.
                                 DEBUG/MEMORY (get) -- shows memory usage report.
-                                DEBUG/TEST (get) -- command for testing something.
-                                DEBUG/TEST-1 (get) -- another command for testing something.
-                                DEBUG/TEST-2 (get) -- one more command for testing something.
+                                DEBUG/TEST (get) -- endpoint for testing something.
+                                DEBUG/TEST-1 (get) -- another endpoint for testing something.
+                                DEBUG/TEST-2 (get) -- one more endpoint for testing something.
                                 DEBUG/TEST-HTML (get) -- returns tes page in HTML format to check Postman/Bruno follows links in HTML results.
+                                DEBUG/TEST-REDIRECT (get) -- shows how works URL redirect.
                                 DEBUG/THREADS (get) -- shows active thread count info.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
