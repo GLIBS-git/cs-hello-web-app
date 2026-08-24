@@ -65,7 +65,7 @@ namespace Glibs.Learning.WebApp
         {
             RouteGroupBuilder apiGroup = _app.MapGroup("/api/v1");
             // / [GET]
-            _app.MapGet("", (HttpContext _httpContext) =>
+            apiGroup.MapGet("", (HttpContext _httpContext) =>
             {
                 return Results.Text(ResponseHelper.GetHelp(""));
             });
@@ -74,8 +74,12 @@ namespace Glibs.Learning.WebApp
             debugGroup.MapGet("/appl-services", (HttpContext _httpContext) =>
             {
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
-                foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
-                    applicationServicesList.Add(new ApplicationService(Name: serviceDescriptor.ServiceType.Name, LifeTime: $"{serviceDescriptor.Lifetime}") );
+                if (serviceCollection != null)
+                {
+                    int counter = 0;
+                    foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
+                        applicationServicesList.Add(new ApplicationService(Number: ++counter, Name: serviceDescriptor.ServiceType.Name, LifeTime: $"{serviceDescriptor.Lifetime}"));
+                }
                 return Results.Json<ApplicationServices>(new ApplicationServices( ApplicationService: applicationServicesList), Program.jsonOptionsEncode);
             });
             // debug/memory [GET]
@@ -101,15 +105,15 @@ namespace Glibs.Learning.WebApp
             {
                 return Results.Text("OK.");
             });
-            // debug/threads [GET]
             // debug/test-html [GET]
             debugGroup.MapGet("/test-html", (HttpContext _httpContext) => // Produced by Gemini
             {
                 return Results.Content(ResponseHelper.TestHtmlPage(), contentType: "text/html");
             });
+            // debug/threads [GET]
             debugGroup.MapGet("/threads", (HttpContext _httpContext) =>
             {
-                return Results.Json(ResponseHelper.ThreadReport, Program.jsonOptionsEncode);
+                return Results.Json(ResponseHelper.ThreadReport(), Program.jsonOptionsEncode);
             });
             // exit [POST]
             apiGroup.MapPost("/exit", (HttpContext _httpContext, ICommonBuffer _commonBuffer) =>
@@ -298,19 +302,19 @@ namespace Glibs.Learning.WebApp
         public record ThreadData(int TotalThreadCount, int ManagedThreadCount);
         public record MemoryData(double WorkingSetMb, double ManagedHeapMb);
         public record ThreadMemoryData(DateTime Timestamp, ThreadData ThreadInfo, MemoryData MemoryInfo);
-        public static ThreadMemoryData ThreadReport(string _host)
+        public static ThreadMemoryData ThreadReport()
         {
             Process currentProcess = Process.GetCurrentProcess();
             int totalThreadCount = currentProcess.Threads.Count;
             int managedThreadCount = ThreadPool.ThreadCount;
-            double workingSetMb = currentProcess.WorkingSet64 / (1024.0 * 1024.0);
-            double managedHeapMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+            double workingSetMb = Math.Round(currentProcess.WorkingSet64 / (1024.0 * 1024.0), 2);
+            double managedHeapMb = Math.Round(GC.GetTotalMemory(false) / (1024.0 * 1024.0), 2);
             ThreadData threadInfo = new ThreadData(totalThreadCount, managedThreadCount);
             MemoryData memoryInfo = new MemoryData(workingSetMb, managedHeapMb);
             return new ThreadMemoryData(DateTime.UtcNow, threadInfo, memoryInfo);
         }
     }
     public record ResponseJson(string Response);
-    public record ApplicationService(string? Name, string LifeTime);
+    public record ApplicationService(int? Number, string? Name, string? LifeTime);
     public record ApplicationServices(IEnumerable<ApplicationService>? ApplicationService);
 }
