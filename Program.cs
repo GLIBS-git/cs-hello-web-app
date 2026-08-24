@@ -16,7 +16,6 @@ namespace Glibs.Learning.WebApp
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
-        static IServiceCollection? serviceCollection = null; // For diagnostics
         public static void Main(string[] args)
         {
             WebApplicationBuilder builder = Program.BuildApplication(args);
@@ -24,16 +23,13 @@ namespace Glibs.Learning.WebApp
             Program.SetupWebApp(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
             Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {commonBuffer?.Host}...");
-            //string? hostAddress = "";
-            //app?.Services.GetRequiredService<IMemoryCache>().TryGetValue("HostAddress", out hostAddress);
-            //Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
             app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
         {
             _app.UseResponseCompression();
             _app.UseHttpMetrics();
-            _app.MapMetrics();
+            _app.MapMetrics("/api/v1/metrics");
             Program.AddMappings(_app);
             _app.Use(async (context, next) => {
                 ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -55,7 +51,7 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
             builder.Services.AddMemoryCache();
             builder.Services.BuildServiceProvider().GetRequiredService<IMemoryCache>().Set("HostAddress", host);
-            serviceCollection = builder.Services;
+            commonBuffer.ServiceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroundService>();
@@ -71,13 +67,13 @@ namespace Glibs.Learning.WebApp
             });
             RouteGroupBuilder debugGroup = apiGroup.MapGroup("/debug");
             // debug/appl-services [GET]
-            debugGroup.MapGet("/appl-services", (HttpContext _httpContext) =>
+            debugGroup.MapGet("/appl-services", (HttpContext _httpContext, ICommonBuffer _commonBuffer) =>
             {
                 List<ApplicationService> applicationServicesList = new List<ApplicationService>();
-                if (serviceCollection != null)
+                if (_commonBuffer.ServiceCollection != null)
                 {
                     int counter = 0;
-                    foreach (ServiceDescriptor serviceDescriptor in serviceCollection)
+                    foreach (ServiceDescriptor serviceDescriptor in _commonBuffer.ServiceCollection)
                         applicationServicesList.Add(new ApplicationService(Number: ++counter, Name: serviceDescriptor.ServiceType.Name, LifeTime: $"{serviceDescriptor.Lifetime}"));
                 }
                 return Results.Json<ApplicationServices>(new ApplicationServices( ApplicationService: applicationServicesList), Program.jsonOptionsEncode);
@@ -168,14 +164,16 @@ namespace Glibs.Learning.WebApp
     public interface ICommonBuffer
     {
         public DateTime ServiceStartTime { get; }
-        public string MachineName { get; }
+        public string? MachineName { get; }
         public string? Host { get; init; }
+        public IServiceCollection? ServiceCollection { get; set; }
     }
     public class CommonBuffer : ICommonBuffer
     {
         public DateTime ServiceStartTime { get; } = DateTime.Now ;
-        public string MachineName { get; } = Environment.MachineName ;
-        public string? Host { get; init; } 
+        public string? MachineName { get; } = Environment.MachineName ;
+        public string? Host { get; init; }
+        public IServiceCollection? ServiceCollection { get; set; }
     }
     public record SysInfo(string Host, string Port, string Machine, string Environment, DateTime StartTime, string ActiveTime);
     public interface IConsoleLogService
@@ -226,6 +224,7 @@ namespace Glibs.Learning.WebApp
                                 DEBUG/THREADS (get) -- shows active thread count info.
                                 EXIT (post) -- stop current web service.
                                 HELP (get) -- get this help.
+                                METRICS (get) -- get the web application Prometheus metrics.
                                 PING (get) -- test connection.
                                         More details on: help/ping.
                                 PWD (get) -- shows current directory of web service.

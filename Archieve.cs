@@ -18,6 +18,9 @@ namespace Glibs.Learning.WebApp
         //builder.Services.AddHostedService<TestBackgroungService>();
         //static WebApplication app = builder.Build();
         //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
+        //string? hostAddress = "";
+        //app?.Services.GetRequiredService<IMemoryCache>().TryGetValue("HostAddress", out hostAddress);
+        //Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {hostAddress}...");
         // test [GET]
         //app.MapGet("/api/v1/debug/test", WebRequestProcessor.ProcessGetTest_2);
         // test-1 [GET]
