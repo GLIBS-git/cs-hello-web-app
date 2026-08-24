@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Prometheus;
-using System.Text.Json.Nodes;
 
 namespace Glibs.Learning.WebApp
 {
@@ -30,12 +29,12 @@ namespace Glibs.Learning.WebApp
             _app.UseResponseCompression();
             _app.UseHttpMetrics();
             _app.MapMetrics("/api/v1/metrics");
-            Program.AddMappings(_app);
             _app.Use(async (context, next) => {
                 ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogInformation("Request received. Path: '{Path}'; Query: '{Query}'.", context.Request.Path, context.Request.QueryString);
                 await next(context);
             });
+            Program.AddMappings(_app);
         }
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
@@ -55,7 +54,6 @@ namespace Glibs.Learning.WebApp
             });
             builder.Services.AddResponseCompression( options => options.EnableForHttps = true);
             builder.Services.AddMemoryCache();
-            builder.Services.BuildServiceProvider().GetRequiredService<IMemoryCache>().Set("HostAddress", host);
             commonBuffer.ServiceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
             builder.Services.AddSingleton<IConsoleLogService, LogService>();
@@ -84,12 +82,12 @@ namespace Glibs.Learning.WebApp
                 return Results.Json<ApplicationServices>(new ApplicationServices( ApplicationService: applicationServicesList), Program.jsonOptionsEncode);
             });
             // debug/memory [GET]
-            debugGroup.MapGet("/memory", ResponseHelper.ProcessMemoryReport); // Just onece. A demo of using delegates.
+            debugGroup.MapGet("/memory", ResponseHelper.ProcessMemoryReport); // Just once. A demo of using delegates.
             // debug/test-redirect [GET]
             debugGroup.MapGet("/test", (HttpContext _httpContext) =>
             {
                 // Reserver for tests and debugging
-                return Results.Ok(new { Header = "Test link", Link = "http://localhost:5050/api/v1/debug/test-2" }); // Postman/Bruno do not follow links
+                return Results.Ok(new { Header = "Test link", Link = "/api/v1/debug/test-redirect" }); // Postman/Bruno do not follow links
             });
             // debug/test-1 [GET]
             debugGroup.MapGet("/test-1", (HttpContext _httpContext, IMemoryCache _cache) => 
@@ -243,7 +241,6 @@ namespace Glibs.Learning.WebApp
                                 """;
                     break;
                 case "ping":
-                case "ping-old":
                     helpText = """
                                 Query options:
                         
@@ -268,7 +265,7 @@ namespace Glibs.Learning.WebApp
         public record ManagedHeapData(double TotalManagedHeapMb, double TotalAllocatedLifetimeMb, double GcHeapSizeBytesMb, double FragmentedMb, long MemoryLoadPercentage);
         public record GarbageCollectorData(int Gen0Collections, int Gen1Collections, int Gen2Collections, double PauseTimePercentage);
         public record MemoryReportData(ProcessMemoryData ProcessMemory, ManagedHeapData ManagedHeap, GarbageCollectorData GarbageCollector);
-        public static IResult? ProcessMemoryReport(HttpContext _httpContext)
+        public static IResult ProcessMemoryReport(HttpContext _httpContext)
         {
             Process process = Process.GetCurrentProcess();
             GCMemoryInfo gcInfo = GC.GetGCMemoryInfo();
