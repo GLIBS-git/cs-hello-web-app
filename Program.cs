@@ -21,7 +21,7 @@ namespace Glibs.Learning.WebApp
             WebApplication app = builder.Build();
             Program.SetupWebApp(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
-            Console.WriteLine($"{commonBuffer?.ServiceStartTime.ToString()} # Starting web service at {commonBuffer?.Host}...");
+            app?.Services.GetRequiredService<ILogger<Program>>().LogInformation("Starting web service at {Host}", commonBuffer?.Host);
             app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
@@ -56,7 +56,6 @@ namespace Glibs.Learning.WebApp
             builder.Services.AddMemoryCache();
             commonBuffer.ServiceCollection = builder.Services;
             builder.Services.AddSingleton<ICommonBuffer>(commonBuffer);
-            builder.Services.AddSingleton<IConsoleLogService, LogService>();
             builder.Services.AddHostedService<TestBackgroundService>();
             return builder;
         }
@@ -184,26 +183,16 @@ namespace Glibs.Learning.WebApp
         public IServiceCollection? ServiceCollection { get; set; }
     }
     public record SysInfo(string Host, string Port, string Machine, string Environment, DateTime StartTime, string ActiveTime);
-    public interface IConsoleLogService
-    {
-        void Log(string _message);
-    }
-    public class LogService : IConsoleLogService
-    {
-        public int Counter = 0;
-        public void Log(string _message)
-        {
-            Counter++;
-            Console.WriteLine($"{Counter}: {_message}");
-        }
-    }
     public class TestBackgroundService : BackgroundService
     {
+        private readonly ILogger<TestBackgroundService> logger;
+        public TestBackgroundService(ILogger<TestBackgroundService> _logger) => this.logger = _logger;
         protected override async Task ExecuteAsync(CancellationToken _ct)
         {
             while (!_ct.IsCancellationRequested)
             {
-                Console.WriteLine($"{DateTime.Now.ToString()}    Background service is working.");
+                this.logger.LogInformation("Background service is working.");
+                //Console.WriteLine($"{DateTime.Now.ToString()}    Background service is working.");
                 try { await Task.Delay(60000, _ct); }
                 catch (TaskCanceledException _) { }
             }

@@ -176,6 +176,19 @@ namespace Glibs.Learning.WebApp
             }
             return result;
         }
+        public interface IConsoleLogService
+        {
+            void Log(string _message);
+        }
+        public class LogService : IConsoleLogService
+        {
+            public int Counter = 0;
+            public void Log(string _message)
+            {
+                Counter++;
+                Console.WriteLine($"{Counter}: {_message}");
+            }
+        }
     }
     public enum ContentType
     {
