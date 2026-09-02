@@ -217,7 +217,7 @@ namespace Glibs.Learning.WebApp
                                 DEBUG/TEST (get) -- endpoint for testing something.
                                 DEBUG/TEST-1 (get) -- another endpoint for testing something.
                                 DEBUG/TEST-2 (get) -- one more endpoint for testing something.
-                                DEBUG/TEST-HTML (get) -- returns tes page in HTML format to check Postman/Bruno follows links in HTML results.
+                                DEBUG/TEST-HTML (get) -- returns a test page in HTML format to check Postman/Bruno follows links in HTML results.
                                 DEBUG/TEST-REDIRECT (get) -- shows how works URL redirect.
                                 DEBUG/THREADS (get) -- shows active thread count info.
                                 EXIT (post) -- stop current web service.
