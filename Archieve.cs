@@ -17,6 +17,7 @@ namespace Glibs.Learning.WebApp
         //builder.Services.AddSingleton<IConsoleLogService, LogService>();
         //builder.Services.AddHostedService<TestBackgroungService>();
         //static WebApplication app = builder.Build();
+        //app?.Services.GetRequiredService<ILogger<Program>>().LogInformation("Starting web service at {Host}", commonBuffer?.Host);
         //WebRequestProcessor requestProcessor = new WebRequestProcessor(app);
         //string? hostAddress = "";
         //app?.Services.GetRequiredService<IMemoryCache>().TryGetValue("HostAddress", out hostAddress);

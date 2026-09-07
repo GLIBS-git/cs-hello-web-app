@@ -21,7 +21,7 @@ namespace Glibs.Learning.WebApp
             WebApplication app = builder.Build();
             Program.SetupWebApp(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
-            app?.Services.GetRequiredService<ILogger<Program>>().LogInformation("Starting web service at {Host}", commonBuffer?.Host);
+            app?.Logger.LogInformation("Starting web service at {Host}", commonBuffer?.Host);
             app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
@@ -41,6 +41,8 @@ namespace Glibs.Learning.WebApp
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
             string host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050"; // Or: http://localhost:5050
             CommonBuffer commonBuffer = new CommonBuffer() { Host = host };
+            builder.Configuration["Debug:HostAddress"] = host;
+            builder.Configuration["Debug:StartupTime"] = DateTime.Now.ToString();
             builder.Services.ConfigureHttpJsonOptions(options => // Format for Results.Ok();
             {
                 options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
