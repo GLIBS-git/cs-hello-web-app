@@ -132,7 +132,7 @@ namespace Glibs.Learning.WebApp
             apiGroup.MapPost("/exit", (HttpContext _httpContext, ICommonBuffer _commonBuffer) =>
             {
                 _httpContext.RequestServices.GetService<IHostApplicationLifetime>()?.StopApplication();
-                return Results.Text($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.Host}...", statusCode: StatusCodes.Status202Accepted);
+                return Results.Text($"{DateTime.Now.ToString()} # Stopping web service {_commonBuffer.ConfigurationHost}...", statusCode: StatusCodes.Status202Accepted);
             });
             // help [GET]
             apiGroup.MapGet("/help", (HttpContext _httpContext) =>
