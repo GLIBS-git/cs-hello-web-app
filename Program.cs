@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Prometheus;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace Glibs.Learning.WebApp
 {
@@ -21,7 +23,13 @@ namespace Glibs.Learning.WebApp
             WebApplication app = builder.Build();
             Program.SetupWebApp(app);
             ICommonBuffer? commonBuffer = app?.Services.GetRequiredService<ICommonBuffer>();
-            app?.Logger.LogInformation("Starting web service at {Host}", commonBuffer?.Host);
+            app?.Lifetime.ApplicationStarted.Register(() =>
+            {
+                ILogger<Program> logger = app?.Services.GetRequiredService<ILogger<Program>>() ?? throw new Exception("Logger not found.");
+                IServer? server = app?.Services.GetRequiredService<IServer>();
+                string[]? serverAddress = server?.Features.Get<IServerAddressesFeature>()?.Addresses.ToArray();
+                logger.LogInformation("Web service started at {ServerAddress}.", serverAddress is null ? "" : string.Join(",", serverAddress));
+            });
             app?.Run();
         }
         static void SetupWebApp(WebApplication _app)
@@ -39,9 +47,9 @@ namespace Glibs.Learning.WebApp
         static WebApplicationBuilder BuildApplication(string[] _args)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(_args);
-            string host = builder.Configuration["Urls"] ?? "http://127.0.0.1:5050"; // Or: http://localhost:5050
-            CommonBuffer commonBuffer = new CommonBuffer() { Host = host };
-            builder.Configuration["Debug:HostAddress"] = host;
+            string confHost = builder.Configuration["Urls"] ?? "";
+            CommonBuffer commonBuffer = new CommonBuffer() { ConfigurationHost = confHost };
+            builder.Configuration["Debug:ConfigurationHostAddress"] = confHost;
             builder.Configuration["Debug:StartupTime"] = DateTime.Now.ToString();
             builder.Services.ConfigureHttpJsonOptions(options => // Format for Results.Ok();
             {
@@ -139,7 +147,7 @@ namespace Glibs.Learning.WebApp
             // ping [GET]
             apiGroup.MapGet("/ping", async (HttpContext _httpContext, ICommonBuffer _commonBuffer, string? output, string? delay) =>
             {
-                string pingReply = ResponseHelper.PingReply(_commonBuffer.Host ?? "");
+                string pingReply = ResponseHelper.PingReply(_commonBuffer.ConfigurationHost ?? "");
                 if (int.TryParse(delay ?? "", out int delaySec))
                 {
                     if (delaySec > 0)
@@ -174,14 +182,14 @@ namespace Glibs.Learning.WebApp
     {
         public DateTime ServiceStartTime { get; }
         public string? MachineName { get; }
-        public string? Host { get; init; }
+        public string? ConfigurationHost { get; init; }
         public IServiceCollection? ServiceCollection { get; set; }
     }
     public class CommonBuffer : ICommonBuffer
     {
         public DateTime ServiceStartTime { get; } = DateTime.Now ;
         public string? MachineName { get; } = Environment.MachineName ;
-        public string? Host { get; init; }
+        public string? ConfigurationHost { get; init; }
         public IServiceCollection? ServiceCollection { get; set; }
     }
     public record SysInfo(string Host, string Port, string Machine, string Environment, DateTime StartTime, string ActiveTime);
