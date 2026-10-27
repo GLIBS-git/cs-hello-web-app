@@ -1,0 +1,16 @@
+info:
+  name: Test 2
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: "{{url}}/api/v1/debug/test-2"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
