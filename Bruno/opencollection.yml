@@ -1,7 +1,7 @@
 opencollection: 1.0.0
 
 info:
-  name: GlibsTest
+  name: cs-hello-web-app
 config:
   proxy:
     inherit: true
@@ -20,6 +20,9 @@ request:
       value: http://127.0.0.1:5050
     - name: url
       value: http://localhost:5050
+      disabled: true
+    - name: url
+      value: http://192.168.0.159:5050
       disabled: true
 bundled: false
 extensions:

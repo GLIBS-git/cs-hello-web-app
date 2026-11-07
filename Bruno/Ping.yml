@@ -1,7 +1,7 @@
 info:
   name: Ping
   type: http
-  seq: 6
+  seq: 8
 
 http:
   method: GET
@@ -9,6 +9,14 @@ http:
   params:
     - name: delay
       value: "5"
+      type: query
+      disabled: true
+    - name: output
+      value: json
+      type: query
+      disabled: true
+    - name: output
+      value: text
       type: query
       disabled: true
   auth: inherit

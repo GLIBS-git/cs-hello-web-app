@@ -1,0 +1,16 @@
+info:
+  name: Root api v1
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: "{{url}}/api/v1"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

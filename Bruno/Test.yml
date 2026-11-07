@@ -1,7 +1,7 @@
 info:
   name: Test
   type: http
-  seq: 10
+  seq: 14
 
 http:
   method: GET
